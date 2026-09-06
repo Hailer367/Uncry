@@ -48,9 +48,10 @@ class MainActivity : AppCompatActivity() {
         }
 
     private val notifPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
-            // Notification is best-effort; monitoring runs regardless.
-            refreshMonitorUi()
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // Notification is best-effort; usage access is next in order either way.
+            promptUsageAccessIfNeeded()
+            refreshAccessUi()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,7 +115,6 @@ class MainActivity : AppCompatActivity() {
             // then render which defaults are actually on this device.
             usageDialog?.dismiss()
             usageDialog = null
-            requestNotifPermissionIfNeeded()
             AppMonitorService.start(this)
             refreshMonitorUi()
             maybePromptBatteryExemption()
@@ -204,6 +204,12 @@ class MainActivity : AppCompatActivity() {
         refreshMonitorUi()
     }
 
+    private fun hasNotifPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
     private fun requestNotifPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -216,8 +222,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestBasePermissions() {
+        // Fixed order: SMS -> notification -> usage access -> battery.
         if (!hasSmsPermission()) {
             requestSmsPermissionIfNeeded()
+        } else if (!hasNotifPermission()) {
+            requestNotifPermissionIfNeeded()
         } else {
             promptUsageAccessIfNeeded()
         }
@@ -227,8 +236,10 @@ class MainActivity : AppCompatActivity() {
     private fun onGrantClicked() {
         if (!hasSmsPermission()) {
             requestSmsPermissionIfNeeded()
+        } else if (!hasNotifPermission()) {
+            requestNotifPermissionIfNeeded()
         } else {
-            // SMS done; take them straight to Uncry's usage-access page.
+            // SMS + notification done; usage access is next in order.
             openUsageAccessSettings()
         }
     }
@@ -263,7 +274,12 @@ class MainActivity : AppCompatActivity() {
     private fun onSmsResult(granted: Boolean, permanentlyDenied: Boolean = false) {
         refreshAccessUi()
         if (granted) {
-            promptUsageAccessIfNeeded()
+            // Order: SMS -> notification -> usage access (battery comes last).
+            if (hasNotifPermission()) {
+                promptUsageAccessIfNeeded()
+            } else {
+                requestNotifPermissionIfNeeded()
+            }
             return // Phase 1: no SMS features yet, just the grant.
         }
         val msg = if (permanentlyDenied) {
