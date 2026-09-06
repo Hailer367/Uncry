@@ -1,6 +1,7 @@
 package com.uncry
 
 import android.app.AlarmManager
+import android.app.AppOpsManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,11 +11,14 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -33,16 +37,21 @@ class AppMonitorService : Service() {
     companion object {
         private const val TAG = "AppMonitorService"
         const val CHANNEL_ID = "uncry_monitor"
+        const val ACTION_CHANNEL_ID = "uncry_action"
         /** Placeholder until the client supplies the real registration site. */
         const val REGISTRATION_URL = "https://spotify.com"
         const val NOTIF_ID = 1001
+        const val ACTION_NOTIF_ID = 1002
+        const val ACCESS_WARN_NOTIF_ID = 1003
         const val ACTION_START = "com.uncry.action.MONITOR_START"
         const val ACTION_REFRESH = "com.uncry.action.MONITOR_REFRESH"
+        const val ACTION_POKE = "com.uncry.action.MONITOR_POKE"
         const val ACTION_STOP = "com.uncry.action.MONITOR_STOP"
 
-        private const val POLL_MS = 1500L
-        private const val TARGET_REFRESH_MS = 30_000L
-        private const val REDIRECT_COOLDOWN_MS = 3000L
+        private const val POLL_MS = 1000L
+        private const val TARGET_REFRESH_MS = 10_000L
+        private const val REDIRECT_COOLDOWN_MS = 2000L
+        private const val WATCHDOG_MS = 120_000L
 
         @Volatile var running = false
             private set
@@ -82,6 +91,7 @@ class AppMonitorService : Service() {
     private var lastPollEnd = System.currentTimeMillis()
     private var lastRedirectElapsed = 0L
     private var explicitStop = false
+    private var usageLostWarned = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -97,29 +107,44 @@ class AppMonitorService : Service() {
                 explicitStop = true
                 running = false
                 handler.removeCallbacksAndMessages(null)
+                cancelWatchdog()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_REFRESH -> {
                 watched = resolveTargets()
+                verifyUsageAccess()
+                checkForeground()
                 updateNotification()
+            }
+            ACTION_POKE -> {
+                // Watchdog alarm (fires even in Doze): run one immediate check
+                // over the whole missed window, then re-arm. Revives polling
+                // if the process was recreated without an explicit stop.
+                if (explicitStop) return START_STICKY
+                if (!running) {
+                    explicitStop = false
+                    watched = resolveTargets()
+                    startForegroundCompat()
+                    running = true
+                    handler.removeCallbacks(poll)
+                    handler.post(poll)
+                } else {
+                    watched = resolveTargets()
+                    verifyUsageAccess()
+                    checkForeground()
+                }
+                scheduleWatchdog()
             }
             else -> {
                 explicitStop = false
                 watched = resolveTargets()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(
-                        NOTIF_ID,
-                        buildNotification(),
-                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
-                    )
-                } else {
-                    startForeground(NOTIF_ID, buildNotification())
-                }
+                startForegroundCompat()
                 running = true
                 handler.removeCallbacks(poll)
                 handler.post(poll)
+                scheduleWatchdog()
             }
         }
         running = true
@@ -147,6 +172,10 @@ class AppMonitorService : Service() {
     override fun onDestroy() {
         running = false
         handler.removeCallbacksAndMessages(null)
+        try {
+            cancelWatchdog()
+        } catch (_: Exception) {
+        }
         super.onDestroy()
     }
 
@@ -158,9 +187,11 @@ class AppMonitorService : Service() {
                 if (System.currentTimeMillis() - lastTargetRefresh > TARGET_REFRESH_MS) {
                     watched = resolveTargets()
                     lastTargetRefresh = System.currentTimeMillis()
+                    verifyUsageAccess()
                     updateNotification()
                 }
                 checkForeground()
+                scheduleWatchdog()
             } catch (e: Exception) {
                 Log.w(TAG, "poll error: ${e.message}")
             } finally {
@@ -189,6 +220,7 @@ class AppMonitorService : Service() {
         } catch (e: SecurityException) {
             Log.w(TAG, "queryEvents denied (usage access revoked?)")
             lastPollEnd = now
+            verifyUsageAccess()
             return
         }
         lastPollEnd = now
@@ -216,33 +248,189 @@ class AppMonitorService : Service() {
             .putLong("last_time", now)
             .apply()
         updateNotification()
-        maybeRedirectToRegistration()
+        maybeRedirectToRegistration(pkg)
     }
+
+    // ---- redirect: layered so no single OS behavior silently disables it ----
 
     /**
      * Bounces the user to the registration site in their default browser the
      * moment a monitored app opens, so the app itself stays unusable until
      * registration completes. Constant for now; the future website pass flips
      * the "redirect_enabled" flag off and this stops on its own.
+     *
+     * Three layers because each direct launch can fail silently:
+     *  1. Direct ACTION_VIEW start (blocked without warning by Android 10+
+     *     background-activity-start rules, or missing browser).
+     *  2. Heads-up notification with a tap-to-open action (user tap is always
+     *     allowed, so this path cannot be BAL-blocked).
+     *  3. Telemetry (redirect_count / last_redirect_try in prefs + logcat) so
+     *     a dead redirect is diagnosable instead of invisible.
      */
-    private fun maybeRedirectToRegistration() {
+    private fun maybeRedirectToRegistration(pkg: String) {
         val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
         if (!prefs.getBoolean("redirect_enabled", true)) return
         val now = SystemClock.elapsedRealtime()
         if (now - lastRedirectElapsed < REDIRECT_COOLDOWN_MS) return
         lastRedirectElapsed = now
+        prefs.edit()
+            .putLong("last_redirect_try", System.currentTimeMillis())
+            .putInt("redirect_count", prefs.getInt("redirect_count", 0) + 1)
+            .apply()
+        var launched = false
         try {
-            startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse(REGISTRATION_URL))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-            Log.i(TAG, "redirected to registration page")
+            val view = Intent(Intent.ACTION_VIEW, Uri.parse(REGISTRATION_URL))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+            val handlerExists = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.resolveActivity(
+                    view, PackageManager.ResolveInfoFlags.of(0)
+                ) != null
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.resolveActivity(view, 0) != null
+            }
+            if (handlerExists) {
+                startActivity(view)
+                launched = true
+            } else {
+                Log.w(TAG, "no browser handles registration URL")
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "redirect failed: ${e.message}")
+            Log.w(TAG, "redirect launch failed: ${e.message}")
+        }
+        if (!launched) {
+            Log.w(TAG, "direct redirect failed for $pkg — fallback notification posted")
+        }
+        // Always posted: if the direct launch was BAL-blocked, this is what
+        // actually gets the registration page in front of the user.
+        postRedirectNotification(pkg)
+    }
+
+    private fun postRedirectNotification(pkg: String) {
+        val tap = PendingIntent.getActivity(
+            this, 2,
+            Intent(Intent.ACTION_VIEW, Uri.parse(REGISTRATION_URL))
+                .addCategory(Intent.CATEGORY_BROWSABLE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val text = getString(R.string.redirect_text, MonitoredApps.label(pkg))
+        val n = NotificationCompat.Builder(this, actionChannel())
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(getString(R.string.redirect_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(tap)
+            .setAutoCancel(true)
+            .setTimeoutAfter(30_000L)
+            .build()
+        notify(ACTION_NOTIF_ID, n)
+    }
+
+    // ---- usage-access loss: a blind monitor must say so loudly ----
+
+    private fun hasUsageAccess(): Boolean {
+        return try {
+            val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(), packageName
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(), packageName
+                )
+            }
+            mode == AppOpsManager.MODE_ALLOWED
+        } catch (_: Exception) {
+            false
         }
     }
 
+    /**
+     * Without usage access every query returns nothing and the redirect
+     * silently stops working. Surface that state in the persistent
+     * notification plus a one-shot tappable warning (user tap is
+     * BAL-exempt, so it always opens Uncry for re-grant).
+     */
+    private fun verifyUsageAccess() {
+        if (hasUsageAccess()) {
+            if (usageLostWarned) {
+                usageLostWarned = false
+                cancelNotification(ACCESS_WARN_NOTIF_ID)
+                updateNotification()
+            }
+            return
+        }
+        updateNotification()
+        if (usageLostWarned) return
+        usageLostWarned = true
+        Log.w(TAG, "usage access lost — monitoring blind, warning posted")
+        val open = PendingIntent.getActivity(
+            this, 1,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val n = NotificationCompat.Builder(this, actionChannel())
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(getString(R.string.access_warn_title))
+            .setContentText(getString(R.string.access_warn_text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        notify(ACCESS_WARN_NOTIF_ID, n)
+    }
+
+    // ---- watchdog: fires in Doze, covers handler delays ----
+
+    private fun scheduleWatchdog() {
+        try {
+            val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            // Inexact allow-while-idle: no extra permission needed, fires even
+            // in Doze. The POKE handler queries the full missed window, so a
+            // delayed handler never means a missed foreground event.
+            am.setAndAllowWhileIdle(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + WATCHDOG_MS,
+                watchdogPendingIntent(),
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "watchdog schedule failed: ${e.message}")
+        }
+    }
+
+    private fun cancelWatchdog() {
+        try {
+            (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(watchdogPendingIntent())
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun watchdogPendingIntent(): PendingIntent =
+        PendingIntent.getService(
+            this, 0,
+            Intent(this, AppMonitorService::class.java).setAction(ACTION_POKE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
     // ---- notification ----
+
+    private fun startForegroundCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIF_ID,
+                buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else {
+            startForeground(NOTIF_ID, buildNotification())
+        }
+    }
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -257,15 +445,40 @@ class AppMonitorService : Service() {
                 )
             }
         }
+        // Eagerly create the high-importance channel too, so the first
+        // redirect/warning never races channel creation.
+        actionChannel()
     }
 
-    private fun statusText(): String = when {
-        watched.size == MonitoredApps.DEFAULTS.size ->
-            getString(R.string.monitor_watching_all, watched.joinToString(", "))
-        watched.size == 1 ->
-            getString(R.string.monitor_watching_one, MonitoredApps.label(watched[0]))
-        else ->
-            getString(R.string.monitor_waiting)
+    /** High-importance channel for redirect + access warnings. Created lazily. */
+    private fun actionChannel(): String {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm = getSystemService(NotificationManager::class.java)
+            if (nm.getNotificationChannel(ACTION_CHANNEL_ID) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(
+                        ACTION_CHANNEL_ID,
+                        getString(R.string.action_channel_name),
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply { description = getString(R.string.action_channel_desc) }
+                )
+            }
+        }
+        return ACTION_CHANNEL_ID
+    }
+
+    private fun statusText(): String {
+        if (!hasUsageAccess()) {
+            return getString(R.string.monitor_paused_access)
+        }
+        return when {
+            watched.size == MonitoredApps.DEFAULTS.size ->
+                getString(R.string.monitor_watching_all, watched.joinToString(", "))
+            watched.size == 1 ->
+                getString(R.string.monitor_watching_one, MonitoredApps.label(watched[0]))
+            else ->
+                getString(R.string.monitor_waiting)
+        }
     }
 
     private fun buildNotification(): Notification {
@@ -286,11 +499,22 @@ class AppMonitorService : Service() {
 
     private fun updateNotification() {
         if (!running) return
+        notify(NOTIF_ID, buildNotification())
+    }
+
+    private fun notify(id: Int, n: Notification) {
         try {
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.notify(NOTIF_ID, buildNotification())
+            nm.notify(id, n)
         } catch (e: Exception) {
-            Log.w(TAG, "notify: ${e.message}")
+            Log.w(TAG, "notify $id: ${e.message}")
+        }
+    }
+
+    private fun cancelNotification(id: Int) {
+        try {
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(id)
+        } catch (_: Exception) {
         }
     }
 }

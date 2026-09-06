@@ -263,6 +263,17 @@ class MainActivity : AppCompatActivity() {
         if (lastPkg != null) {
             findViewById<TextView>(R.id.monitor_status).append("\nLast seen: $lastPkg")
         }
+        val redirects = prefs.getInt("redirect_count", 0)
+        if (redirects > 0) {
+            val lastTry = prefs.getLong("last_redirect_try", 0)
+            val whenText = if (lastTry > 0) {
+                java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                    .format(java.util.Date(lastTry))
+            } else {
+                "?"
+            }
+            findViewById<TextView>(R.id.monitor_status).append("\nRedirects fired: $redirects (last $whenText)")
+        }
     }
 
     private fun startMonitoring() {

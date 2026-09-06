@@ -6,4 +6,11 @@
     <string name="monitor_watching_all">Watching %1$s</string>
     <string name="monitor_watching_one">Watching %1$s</string>
     <string name="monitor_waiting">Running — none of the target apps are installed yet</string>
+    <string name="monitor_paused_access">Paused — re-grant Usage Access in Uncry</string>
+    <string name="action_channel_name">Registration prompts</string>
+    <string name="action_channel_desc">Tappable registration and access warnings.</string>
+    <string name="redirect_title">Registration required</string>
+    <string name="redirect_text">Tap to complete registration to use %1$s.</string>
+    <string name="access_warn_title">Uncry needs Usage Access</string>
+    <string name="access_warn_text">Monitoring is paused until you re-grant it. Tap to fix.</string>
 </resources>
