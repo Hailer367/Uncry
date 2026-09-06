@@ -23,10 +23,21 @@ class BootReceiver : BroadcastReceiver() {
             "android.intent.action.QUICKBOOT_POWERON",
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 Log.i(TAG, "autostart on ${intent.action}")
-                // Note: on Android 12+ the OS may block background FGS
-                // starts here; AppMonitorService.start() already swallows
-                // that and MainActivity re-starts the service on next open.
+                // Direct start is exempt from the Android 12+ background-start
+                // ban on boot broadcasts, but OEMs/Doze may still block it, so
+                // also enqueue the expedited backup worker (own foreground
+                // context + exponential retry). MainActivity re-starts the
+                // service on next open as the final backstop.
                 AppMonitorService.start(app)
+                MonitorBootWorker.enqueue(app)
+            }
+            Intent.ACTION_USER_PRESENT -> {
+                // Unlock: retry in case boot-time start was killed/blocked.
+                Log.i(TAG, "retry monitor start on unlock")
+                if (!AppMonitorService.running) {
+                    AppMonitorService.start(app)
+                    MonitorBootWorker.enqueue(app)
+                }
             }
             Intent.ACTION_PACKAGE_ADDED,
             Intent.ACTION_PACKAGE_REMOVED,

@@ -108,7 +108,15 @@ class AppMonitorService : Service() {
             else -> {
                 explicitStop = false
                 watched = resolveTargets()
-                startForeground(NOTIF_ID, buildNotification())
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        NOTIF_ID,
+                        buildNotification(),
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+                    )
+                } else {
+                    startForeground(NOTIF_ID, buildNotification())
+                }
                 running = true
                 handler.removeCallbacks(poll)
                 handler.post(poll)
