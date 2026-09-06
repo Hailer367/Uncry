@@ -317,7 +317,7 @@ class MainActivity : AppCompatActivity() {
         usageDialog = AlertDialog.Builder(this)
             .setTitle("Usage access required")
             .setMessage("Uncry requires Usage Access to run as intended.")
-            .setPositiveButton("Open Settings") { _, _ -> openUsageAccessSettings() }
+            .setPositiveButton("Allow") { _, _ -> openUsageAccessSettings() }
             .setCancelable(false)
             .show()
     }
