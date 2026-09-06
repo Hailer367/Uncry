@@ -51,11 +51,13 @@
                 android:value="Monitors target payment apps via UsageStats so Uncry can react the moment one opens." />
         </service>
 
-        <!-- Autostart after boot / update. -->
+        <!-- Autostart after boot / update. directBootAware so
+             LOCKED_BOOT_COMPLETED is actually delivered. -->
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:directBootAware="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />

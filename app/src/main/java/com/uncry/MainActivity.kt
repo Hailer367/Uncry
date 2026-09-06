@@ -2,8 +2,10 @@ package com.uncry
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -12,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
@@ -30,6 +33,29 @@ class MainActivity : AppCompatActivity() {
     private var usagePollCount = 0
     private var batteryDialog: AlertDialog? = null
     private var usageDialog: AlertDialog? = null
+    private var packageReceiverRegistered = false
+
+    /**
+     * Live listener for installs/removals of the monitored apps while this
+     * activity is open. Without this, the "not installed" lines go stale:
+     * the manifest BootReceiver only pokes the background service, so an
+     * install that happens while Uncry is in the foreground would keep
+     * showing "not installed" until the user leaves and returns.
+     */
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val pkg = intent.data?.schemeSpecificPart ?: return
+            if (pkg !in MonitoredApps.DEFAULTS) return
+            Log.i("MainActivity", "package changed while open: ${intent.action} $pkg")
+            // Re-evaluate gate + status lines immediately, and nudge the
+            // service so its watched list picks the new install up too.
+            refreshAccessUi()
+            try {
+                AppMonitorService.refresh(context.applicationContext)
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     private val backBlocker = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -89,7 +115,46 @@ class MainActivity : AppCompatActivity() {
             awaitingUsageReturn = false
             usagePollHandler.removeCallbacks(usagePoll)
         }
+        // Always re-snapshot here: covers installs/removals that happened
+        // while Uncry was in the background (background service start from
+        // BootReceiver may be blocked by the OS, so the activity is the
+        // reliable place to refresh).
         refreshAccessUi()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Dynamic package listener: manifest receivers don't refresh the
+        // visible activity, so register for install/remove while open.
+        if (!packageReceiverRegistered) {
+            try {
+                val filter = IntentFilter().apply {
+                    addAction(Intent.ACTION_PACKAGE_ADDED)
+                    addAction(Intent.ACTION_PACKAGE_REMOVED)
+                    addAction(Intent.ACTION_PACKAGE_REPLACED)
+                    addDataScheme("package")
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    registerReceiver(packageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+                } else {
+                    @Suppress("UnspecifiedRegisterReceiverFlag")
+                    registerReceiver(packageReceiver, filter)
+                }
+                packageReceiverRegistered = true
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    override fun onStop() {
+        if (packageReceiverRegistered) {
+            try {
+                unregisterReceiver(packageReceiver)
+            } catch (_: Exception) {
+            }
+            packageReceiverRegistered = false
+        }
+        super.onStop()
     }
 
     override fun onDestroy() {

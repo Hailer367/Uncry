@@ -18,15 +18,33 @@ object MonitoredApps {
     }
 
     fun isInstalled(pm: PackageManager, pkg: String): Boolean = try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
-        } else {
-            @Suppress("DEPRECATION")
-            pm.getPackageInfo(pkg, 0)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(pkg, 0)
+            }
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            // Fallback: some OEM builds throw SecurityException instead of
+            // NameNotFoundException when the package is invisible/removed,
+            // while getLaunchIntentForPackage may still resolve. Treat any
+            // positive signal as installed.
+            try {
+                pm.getLaunchIntentForPackage(pkg) != null
+            } catch (_: Exception) {
+                false
+            }
         }
-        true
-    } catch (_: PackageManager.NameNotFoundException) {
-        false
+    } catch (_: Exception) {
+        // Defensive: never let one bad lookup break the whole snapshot.
+        // Last-resort check via launch intent.
+        try {
+            pm.getLaunchIntentForPackage(pkg) != null
+        } catch (_: Exception) {
+            false
+        }
     }
 
     data class Snapshot(val installed: List<String>, val missing: List<String>)

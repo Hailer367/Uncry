@@ -23,6 +23,9 @@ class BootReceiver : BroadcastReceiver() {
             "android.intent.action.QUICKBOOT_POWERON",
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 Log.i(TAG, "autostart on ${intent.action}")
+                // Note: on Android 12+ the OS may block background FGS
+                // starts here; AppMonitorService.start() already swallows
+                // that and MainActivity re-starts the service on next open.
                 AppMonitorService.start(app)
             }
             Intent.ACTION_PACKAGE_ADDED,
@@ -31,8 +34,15 @@ class BootReceiver : BroadcastReceiver() {
                 val pkg = intent.data?.schemeSpecificPart
                 if (pkg != null && pkg in MonitoredApps.DEFAULTS) {
                     Log.i(TAG, "monitored package changed: ${intent.action} $pkg")
-                    if (AppMonitorService.running) AppMonitorService.refresh(app)
-                    else AppMonitorService.start(app)
+                    // ACTION_PACKAGE_ADDED with REPLACING extra fires during
+                    // updates too — still refresh so version/availability
+                    // never goes stale ("not installed" after install).
+                    try {
+                        if (AppMonitorService.running) AppMonitorService.refresh(app)
+                        else AppMonitorService.start(app)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "refresh after package change failed: ${e.message}")
+                    }
                 }
             }
         }
