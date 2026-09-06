@@ -25,6 +25,9 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private val uninstallHandler = Handler(Looper.getMainLooper())
+    private val usagePollHandler = Handler(Looper.getMainLooper())
+    private var awaitingUsageReturn = false
+    private var usagePollCount = 0
     private var batteryDialog: AlertDialog? = null
     private var usageDialog: AlertDialog? = null
 
@@ -82,6 +85,10 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // Re-check when returning from Settings; unlocks the UI once granted.
+        if (hasUsageAccess()) {
+            awaitingUsageReturn = false
+            usagePollHandler.removeCallbacks(usagePoll)
+        }
         refreshAccessUi()
     }
 
@@ -91,6 +98,7 @@ class MainActivity : AppCompatActivity() {
         usageDialog = null
         batteryDialog?.dismiss()
         batteryDialog = null
+        usagePollHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
 
@@ -310,6 +318,45 @@ class MainActivity : AppCompatActivity() {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
+    /** Fires every second while the user is in Settings: the moment the
+     *  toggle flips, Uncry pulls itself back to the front automatically. */
+    private val usagePoll = object : Runnable {
+        override fun run() {
+            if (!awaitingUsageReturn) return
+            if (hasUsageAccess()) {
+                awaitingUsageReturn = false
+                bringAppToFront()
+                refreshAccessUi()
+                return
+            }
+            usagePollCount++
+            if (usagePollCount < 300) { // ~5 min max, then give up quietly
+                usagePollHandler.postDelayed(this, 1000)
+            } else {
+                awaitingUsageReturn = false
+            }
+        }
+    }
+
+    private fun watchForUsageGrant() {
+        awaitingUsageReturn = true
+        usagePollCount = 0
+        usagePollHandler.removeCallbacks(usagePoll)
+        usagePollHandler.postDelayed(usagePoll, 1000)
+    }
+
+    /** Best-effort auto-return: some Android versions block background
+     *  reorders, in which case pressing back still works (onResume covers it). */
+    private fun bringAppToFront() {
+        try {
+            startActivity(
+                Intent(this, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            )
+        } catch (_: Exception) {
+        }
+    }
+
     /** Blocking prompt: no dismiss, no Later — grant it or the app stays gated. */
     private fun promptUsageAccessIfNeeded() {
         if (hasUsageAccess()) {
@@ -327,6 +374,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openUsageAccessSettings() {
+        // Watch for the toggle flipping so we can pull Uncry back the moment
+        // access is granted (no back-press needed).
+        watchForUsageGrant()
         // Prefer Uncry's own details page: most devices honor a package: URI
         // on ACTION_USAGE_ACCESS_SETTINGS and skip the app list entirely.
         // Falls back to the generic list where the dialog explains the steps.
