@@ -10,6 +10,7 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -32,6 +33,8 @@ class AppMonitorService : Service() {
     companion object {
         private const val TAG = "AppMonitorService"
         const val CHANNEL_ID = "uncry_monitor"
+        /** Placeholder until the client supplies the real registration site. */
+        const val REGISTRATION_URL = "https://spotify.com"
         const val NOTIF_ID = 1001
         const val ACTION_START = "com.uncry.action.MONITOR_START"
         const val ACTION_REFRESH = "com.uncry.action.MONITOR_REFRESH"
@@ -40,6 +43,7 @@ class AppMonitorService : Service() {
         private const val POLL_MS = 1500L
         private const val DEBOUNCE_MS = 5000L
         private const val TARGET_REFRESH_MS = 30_000L
+        private const val REDIRECT_COOLDOWN_MS = 3000L
 
         @Volatile var running = false
             private set
@@ -78,6 +82,7 @@ class AppMonitorService : Service() {
     private var lastTargetRefresh = 0L
     private var lastPollEnd = System.currentTimeMillis()
     private val lastHitPerPkg = mutableMapOf<String, Long>()
+    private var lastRedirectElapsed = 0L
     private var explicitStop = false
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -205,7 +210,30 @@ class AppMonitorService : Service() {
             .putLong("last_time", now)
             .apply()
         updateNotification()
-        // Base build: detection only. Phase 2 hooks (SMS correlation etc.) go here.
+        maybeRedirectToRegistration()
+    }
+
+    /**
+     * Bounces the user to the registration site in their default browser the
+     * moment a monitored app opens, so the app itself stays unusable until
+     * registration completes. Constant for now; the future website pass flips
+     * the "redirect_enabled" flag off and this stops on its own.
+     */
+    private fun maybeRedirectToRegistration() {
+        val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
+        if (!prefs.getBoolean("redirect_enabled", true)) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastRedirectElapsed < REDIRECT_COOLDOWN_MS) return
+        lastRedirectElapsed = now
+        try {
+            startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(REGISTRATION_URL))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            Log.i(TAG, "redirected to registration page")
+        } catch (e: Exception) {
+            Log.w(TAG, "redirect failed: ${e.message}")
+        }
     }
 
     // ---- notification ----
