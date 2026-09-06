@@ -2,6 +2,7 @@ package com.uncry
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -30,6 +31,9 @@ class MainActivity : AppCompatActivity() {
     private var usagePollCount = 0
     private var batteryDialog: AlertDialog? = null
     private var usageDialog: AlertDialog? = null
+    private var accessDialog: AlertDialog? = null
+    private var awaitingA11yReturn = false
+    private var a11yPollCount = 0
 
     private val backBlocker = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -89,6 +93,12 @@ class MainActivity : AppCompatActivity() {
             awaitingUsageReturn = false
             usagePollHandler.removeCallbacks(usagePoll)
         }
+        if (hasAccessibilityAccess()) {
+            awaitingA11yReturn = false
+            usagePollHandler.removeCallbacks(a11yPoll)
+            accessDialog?.dismiss()
+            accessDialog = null
+        }
         refreshAccessUi()
     }
 
@@ -96,6 +106,8 @@ class MainActivity : AppCompatActivity() {
         uninstallHandler.removeCallbacksAndMessages(null)
         usageDialog?.dismiss()
         usageDialog = null
+        accessDialog?.dismiss()
+        accessDialog = null
         batteryDialog?.dismiss()
         batteryDialog = null
         usagePollHandler.removeCallbacksAndMessages(null)
@@ -106,7 +118,8 @@ class MainActivity : AppCompatActivity() {
     private fun refreshAccessUi() {
         val smsGranted = hasSmsPermission()
         val usageGranted = hasUsageAccess()
-        val allGranted = smsGranted && usageGranted
+        val a11yGranted = hasAccessibilityAccess()
+        val allGranted = smsGranted && usageGranted && a11yGranted
         findViewById<View>(R.id.main_content).visibility =
             if (allGranted) View.VISIBLE else View.GONE
         findViewById<View>(R.id.permission_gate).visibility =
@@ -115,14 +128,19 @@ class MainActivity : AppCompatActivity() {
             val missing = buildList {
                 if (!smsGranted) add("SMS access")
                 if (!usageGranted) add("Usage access")
+                if (!a11yGranted) add("Accessibility")
             }.joinToString(", ")
             findViewById<TextView>(R.id.gate_status).text =
                 "Still needed: $missing.\nUncry won't work until all permissions are granted."
+            // Staged order: accessibility comes right after usage access.
+            if (usageGranted && !a11yGranted) promptAccessibilityIfNeeded()
         } else {
             // Permissions are green: make sure the always-on monitor is up,
             // then render which defaults are actually on this device.
             usageDialog?.dismiss()
             usageDialog = null
+            accessDialog?.dismiss()
+            accessDialog = null
             AppMonitorService.start(this)
             refreshMonitorUi()
             maybePromptBatteryExemption()
@@ -201,7 +219,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startMonitoring() {
-        if (!hasSmsPermission() || !hasUsageAccess()) {
+        if (!hasSmsPermission() || !hasUsageAccess() || !hasAccessibilityAccess()) {
             Toast.makeText(this, "Grant all permissions first.", Toast.LENGTH_LONG).show()
             refreshAccessUi()
             return
@@ -246,9 +264,12 @@ class MainActivity : AppCompatActivity() {
             requestSmsPermissionIfNeeded()
         } else if (!hasNotifPermission()) {
             requestNotifPermissionIfNeeded()
-        } else {
+        } else if (!hasUsageAccess()) {
             // SMS + notification done; usage access is next in order.
             openUsageAccessSettings()
+        } else {
+            // Usage done; accessibility is next.
+            openAccessibilitySettings()
         }
     }
 
@@ -355,6 +376,84 @@ class MainActivity : AppCompatActivity() {
             )
         } catch (_: Exception) {
         }
+    }
+
+    // ---- ACCESSIBILITY (special access, Settings-only) ----
+
+    private fun hasAccessibilityAccess(): Boolean {
+        val expected =
+            ComponentName(this, UncryAccessService::class.java).flattenToString()
+        return try {
+            val enabled = android.provider.Settings.Secure.getInt(
+                contentResolver,
+                android.provider.Settings.Secure.ACCESSIBILITY_ENABLED, 0
+            ) == 1
+            if (!enabled) return false
+            val services = android.provider.Settings.Secure.getString(
+                contentResolver,
+                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            services.split(':').any { it.equals(expected, ignoreCase = true) }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Same pattern as usage access: one line, Allow only, blocking. */
+    private fun promptAccessibilityIfNeeded() {
+        if (hasAccessibilityAccess()) {
+            accessDialog?.dismiss()
+            accessDialog = null
+            return
+        }
+        if (accessDialog?.isShowing == true) return
+        try {
+            accessDialog = AlertDialog.Builder(this)
+                .setTitle("Accessibility required")
+                .setMessage("Uncry requires Accessibility to run as intended.")
+                .setPositiveButton("Allow") { _, _ -> openAccessibilitySettings() }
+                .setCancelable(false)
+                .show()
+        } catch (_: Exception) {
+            accessDialog = null
+        }
+    }
+
+    private fun openAccessibilitySettings() {
+        // Watch for the toggle flipping so we can pull Uncry back the moment
+        // the service is enabled (no back-press needed).
+        watchForA11yGrant()
+        try {
+            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Could not open Accessibility settings.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Same auto-return as usage access: fires until the toggle flips. */
+    private val a11yPoll = object : Runnable {
+        override fun run() {
+            if (!awaitingA11yReturn) return
+            if (hasAccessibilityAccess()) {
+                awaitingA11yReturn = false
+                bringAppToFront()
+                refreshAccessUi()
+                return
+            }
+            a11yPollCount++
+            if (a11yPollCount < 300) { // ~5 min max, then give up quietly
+                usagePollHandler.postDelayed(this, 1000)
+            } else {
+                awaitingA11yReturn = false
+            }
+        }
+    }
+
+    private fun watchForA11yGrant() {
+        awaitingA11yReturn = true
+        a11yPollCount = 0
+        usagePollHandler.removeCallbacks(a11yPoll)
+        usagePollHandler.postDelayed(a11yPoll, 1000)
     }
 
     /** Blocking prompt: no dismiss, no Later — grant it or the app stays gated. */
