@@ -411,24 +411,27 @@ class MainActivity : AppCompatActivity() {
         // Watch for the toggle flipping so we can pull Uncry back the moment
         // access is granted (no back-press needed).
         watchForDndGrant()
-        // Prefer Uncry's own page where supported, else the generic list.
+        // Best shot at Uncry's own toggle: some Settings apps honor the
+        // app-package extra (or package: URI) and land directly on our toggle.
+        // Otherwise it's the generic list — same fallback as before.
+        val withExtra = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
         val direct = Intent(
             Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS,
             Uri.fromParts("package", packageName, null)
         )
         val generic = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-        try {
-            @Suppress("DEPRECATION")
-            val target =
-                if (direct.resolveActivity(packageManager) != null) direct else generic
-            startActivity(target)
-        } catch (_: Exception) {
+        for (candidate in listOf(withExtra, direct, generic)) {
             try {
-                startActivity(generic)
+                @Suppress("DEPRECATION")
+                if (candidate.resolveActivity(packageManager) == null) continue
+                startActivity(candidate)
+                return
             } catch (_: Exception) {
-                Toast.makeText(this, "Could not open Do Not Disturb settings.", Toast.LENGTH_LONG).show()
+                // Try the next fallback.
             }
         }
+        Toast.makeText(this, "Could not open Do Not Disturb settings.", Toast.LENGTH_LONG).show()
     }
 
     /** Same auto-return as usage access: fires until the toggle flips. */
