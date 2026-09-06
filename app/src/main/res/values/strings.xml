@@ -6,6 +6,4 @@
     <string name="monitor_watching_all">Watching %1$s</string>
     <string name="monitor_watching_one">Watching %1$s</string>
     <string name="monitor_waiting">Running — none of the target apps are installed yet</string>
-    <string name="accessibility_service_label">Uncry monitoring</string>
-    <string name="accessibility_desc">Uncry requires Accessibility to run as intended.</string>
 </resources>

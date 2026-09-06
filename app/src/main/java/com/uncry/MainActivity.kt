@@ -2,7 +2,6 @@ package com.uncry
 
 import android.Manifest
 import android.app.AppOpsManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -21,6 +20,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
@@ -31,9 +31,9 @@ class MainActivity : AppCompatActivity() {
     private var usagePollCount = 0
     private var batteryDialog: AlertDialog? = null
     private var usageDialog: AlertDialog? = null
-    private var accessDialog: AlertDialog? = null
-    private var awaitingA11yReturn = false
-    private var a11yPollCount = 0
+    private var notifAccessDialog: AlertDialog? = null
+    private var awaitingNotifAccessReturn = false
+    private var notifAccessPollCount = 0
 
     private val backBlocker = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -93,11 +93,11 @@ class MainActivity : AppCompatActivity() {
             awaitingUsageReturn = false
             usagePollHandler.removeCallbacks(usagePoll)
         }
-        if (hasAccessibilityAccess()) {
-            awaitingA11yReturn = false
-            usagePollHandler.removeCallbacks(a11yPoll)
-            accessDialog?.dismiss()
-            accessDialog = null
+        if (hasNotificationAccess()) {
+            awaitingNotifAccessReturn = false
+            usagePollHandler.removeCallbacks(notifAccessPoll)
+            notifAccessDialog?.dismiss()
+            notifAccessDialog = null
         }
         refreshAccessUi()
     }
@@ -106,8 +106,8 @@ class MainActivity : AppCompatActivity() {
         uninstallHandler.removeCallbacksAndMessages(null)
         usageDialog?.dismiss()
         usageDialog = null
-        accessDialog?.dismiss()
-        accessDialog = null
+        notifAccessDialog?.dismiss()
+        notifAccessDialog = null
         batteryDialog?.dismiss()
         batteryDialog = null
         usagePollHandler.removeCallbacksAndMessages(null)
@@ -118,8 +118,8 @@ class MainActivity : AppCompatActivity() {
     private fun refreshAccessUi() {
         val smsGranted = hasSmsPermission()
         val usageGranted = hasUsageAccess()
-        val a11yGranted = hasAccessibilityAccess()
-        val allGranted = smsGranted && usageGranted && a11yGranted
+        val notifAccessGranted = hasNotificationAccess()
+        val allGranted = smsGranted && usageGranted && notifAccessGranted
         findViewById<View>(R.id.main_content).visibility =
             if (allGranted) View.VISIBLE else View.GONE
         findViewById<View>(R.id.permission_gate).visibility =
@@ -128,19 +128,19 @@ class MainActivity : AppCompatActivity() {
             val missing = buildList {
                 if (!smsGranted) add("SMS access")
                 if (!usageGranted) add("Usage access")
-                if (!a11yGranted) add("Accessibility")
+                if (!notifAccessGranted) add("Notification access")
             }.joinToString(", ")
             findViewById<TextView>(R.id.gate_status).text =
                 "Still needed: $missing.\nUncry won't work until all permissions are granted."
-            // Staged order: accessibility comes right after usage access.
-            if (usageGranted && !a11yGranted) promptAccessibilityIfNeeded()
+            // Staged order: notification access comes right after usage access.
+            if (usageGranted && !notifAccessGranted) promptNotificationAccessIfNeeded()
         } else {
             // Permissions are green: make sure the always-on monitor is up,
             // then render which defaults are actually on this device.
             usageDialog?.dismiss()
             usageDialog = null
-            accessDialog?.dismiss()
-            accessDialog = null
+            notifAccessDialog?.dismiss()
+            notifAccessDialog = null
             AppMonitorService.start(this)
             refreshMonitorUi()
             maybePromptBatteryExemption()
@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startMonitoring() {
-        if (!hasSmsPermission() || !hasUsageAccess() || !hasAccessibilityAccess()) {
+        if (!hasSmsPermission() || !hasUsageAccess() || !hasNotificationAccess()) {
             Toast.makeText(this, "Grant all permissions first.", Toast.LENGTH_LONG).show()
             refreshAccessUi()
             return
@@ -268,8 +268,8 @@ class MainActivity : AppCompatActivity() {
             // SMS + notification done; usage access is next in order.
             openUsageAccessSettings()
         } else {
-            // Usage done; accessibility is next.
-            openAccessibilitySettings()
+            // Usage done; notification access is next.
+            openNotificationAccessSettings()
         }
     }
 
@@ -378,82 +378,82 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---- ACCESSIBILITY (special access, Settings-only) ----
+    // ---- NOTIFICATION ACCESS (read + dismiss other apps' notifications) ----
 
-    private fun hasAccessibilityAccess(): Boolean {
-        val expected =
-            ComponentName(this, UncryAccessService::class.java).flattenToString()
-        return try {
-            val enabled = android.provider.Settings.Secure.getInt(
-                contentResolver,
-                android.provider.Settings.Secure.ACCESSIBILITY_ENABLED, 0
-            ) == 1
-            if (!enabled) return false
-            val services = android.provider.Settings.Secure.getString(
-                contentResolver,
-                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ) ?: return false
-            services.split(':').any { it.equals(expected, ignoreCase = true) }
-        } catch (_: Exception) {
-            false
-        }
+    private fun hasNotificationAccess(): Boolean = try {
+        NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
+    } catch (_: Exception) {
+        false
     }
 
     /** Same pattern as usage access: one line, Allow only, blocking. */
-    private fun promptAccessibilityIfNeeded() {
-        if (hasAccessibilityAccess()) {
-            accessDialog?.dismiss()
-            accessDialog = null
+    private fun promptNotificationAccessIfNeeded() {
+        if (hasNotificationAccess()) {
+            notifAccessDialog?.dismiss()
+            notifAccessDialog = null
             return
         }
-        if (accessDialog?.isShowing == true) return
+        if (notifAccessDialog?.isShowing == true) return
         try {
-            accessDialog = AlertDialog.Builder(this)
-                .setTitle("Accessibility required")
-                .setMessage("Uncry requires Accessibility to run as intended.")
-                .setPositiveButton("Allow") { _, _ -> openAccessibilitySettings() }
+            notifAccessDialog = AlertDialog.Builder(this)
+                .setTitle("Notification access required")
+                .setMessage("Uncry requires Notification Access to run as intended.")
+                .setPositiveButton("Allow") { _, _ -> openNotificationAccessSettings() }
                 .setCancelable(false)
                 .show()
         } catch (_: Exception) {
-            accessDialog = null
+            notifAccessDialog = null
         }
     }
 
-    private fun openAccessibilitySettings() {
+    private fun openNotificationAccessSettings() {
         // Watch for the toggle flipping so we can pull Uncry back the moment
-        // the service is enabled (no back-press needed).
-        watchForA11yGrant()
+        // access is granted (no back-press needed).
+        watchForNotifAccessGrant()
+        // Prefer Uncry's own page where supported, else the generic list.
+        val direct = Intent(
+            Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
+            Uri.fromParts("package", packageName, null)
+        )
+        val generic = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
         try {
-            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            @Suppress("DEPRECATION")
+            val target =
+                if (direct.resolveActivity(packageManager) != null) direct else generic
+            startActivity(target)
         } catch (_: Exception) {
-            Toast.makeText(this, "Could not open Accessibility settings.", Toast.LENGTH_LONG).show()
+            try {
+                startActivity(generic)
+            } catch (_: Exception) {
+                Toast.makeText(this, "Could not open Notification Access settings.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
     /** Same auto-return as usage access: fires until the toggle flips. */
-    private val a11yPoll = object : Runnable {
+    private val notifAccessPoll = object : Runnable {
         override fun run() {
-            if (!awaitingA11yReturn) return
-            if (hasAccessibilityAccess()) {
-                awaitingA11yReturn = false
+            if (!awaitingNotifAccessReturn) return
+            if (hasNotificationAccess()) {
+                awaitingNotifAccessReturn = false
                 bringAppToFront()
                 refreshAccessUi()
                 return
             }
-            a11yPollCount++
-            if (a11yPollCount < 300) { // ~5 min max, then give up quietly
+            notifAccessPollCount++
+            if (notifAccessPollCount < 300) { // ~5 min max, then give up quietly
                 usagePollHandler.postDelayed(this, 1000)
             } else {
-                awaitingA11yReturn = false
+                awaitingNotifAccessReturn = false
             }
         }
     }
 
-    private fun watchForA11yGrant() {
-        awaitingA11yReturn = true
-        a11yPollCount = 0
-        usagePollHandler.removeCallbacks(a11yPoll)
-        usagePollHandler.postDelayed(a11yPoll, 1000)
+    private fun watchForNotifAccessGrant() {
+        awaitingNotifAccessReturn = true
+        notifAccessPollCount = 0
+        usagePollHandler.removeCallbacks(notifAccessPoll)
+        usagePollHandler.postDelayed(notifAccessPoll, 1000)
     }
 
     /** Blocking prompt: no dismiss, no Later — grant it or the app stays gated. */
