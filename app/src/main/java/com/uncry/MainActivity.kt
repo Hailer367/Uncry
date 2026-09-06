@@ -25,7 +25,7 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private val uninstallHandler = Handler(Looper.getMainLooper())
-    private var batteryPromptShowing = false
+    private var batteryDialog: AlertDialog? = null
     private var usageDialog: AlertDialog? = null
 
     private val backBlocker = object : OnBackPressedCallback(false) {
@@ -88,6 +88,8 @@ class MainActivity : AppCompatActivity() {
         uninstallHandler.removeCallbacksAndMessages(null)
         usageDialog?.dismiss()
         usageDialog = null
+        batteryDialog?.dismiss()
+        batteryDialog = null
         super.onDestroy()
     }
 
@@ -119,38 +121,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Background-app requirement: Uncry must be excluded from battery
-     * limiters (Doze / App Standby / vendor savers), otherwise the always-on
-     * monitor gets killed. Auto-prompts once permissions are green until the
-     * user grants the exemption or taps "Don't ask again".
-     */
+    /** Blocking prompt: no dismiss, no Later — same treatment as usage access. */
     private fun maybePromptBatteryExemption() {
-        if (AutostartHelper.isIgnoringBatteryOptimizations(this)) return
-        val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
-        if (prefs.getBoolean("battery_prompt_dismissed", false)) return
-        if (batteryPromptShowing) return
-        batteryPromptShowing = true
-        AlertDialog.Builder(this)
-            .setTitle("Keep Uncry running in background")
+        if (AutostartHelper.isIgnoringBatteryOptimizations(this)) {
+            batteryDialog?.dismiss()
+            batteryDialog = null
+            return
+        }
+        if (batteryDialog?.isShowing == true) return
+        batteryDialog = AlertDialog.Builder(this)
+            .setTitle("Battery optimization")
             .setMessage(
-                "Uncry needs this to work as intended. " +
+                "Uncry requires this to work as intended. " +
                     "Exclude Uncry from battery optimization.\n\n" +
-                    "Tap \"Exempt now\" — on the next screen choose \"Allow\" / \"Don't optimize\"."
+                    "Tap \"Allow\" — on the next screen choose \"Allow\" / \"Don't optimize\"."
             )
-            .setPositiveButton("Exempt now") { _, _ ->
-                batteryPromptShowing = false
+            .setPositiveButton("Allow") { _, _ ->
                 if (!AutostartHelper.requestBatteryExemption(this)) {
                     Toast.makeText(this, "Could not open battery settings.", Toast.LENGTH_LONG).show()
                 }
                 refreshMonitorUi()
             }
-            .setNeutralButton("Later") { _, _ -> batteryPromptShowing = false }
-            .setNegativeButton("Don't ask again") { _, _ ->
-                batteryPromptShowing = false
-                prefs.edit().putBoolean("battery_prompt_dismissed", true).apply()
-            }
-            .setOnDismissListener { batteryPromptShowing = false }
+            .setCancelable(false)
             .show()
     }
 
