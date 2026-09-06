@@ -41,7 +41,6 @@ class AppMonitorService : Service() {
         /** Placeholder until the client supplies the real registration site. */
         const val REGISTRATION_URL = "https://spotify.com"
         const val NOTIF_ID = 1001
-        const val ACTION_NOTIF_ID = 1002
         const val ACCESS_WARN_NOTIF_ID = 1003
         const val ACTION_START = "com.uncry.action.MONITOR_START"
         const val ACTION_REFRESH = "com.uncry.action.MONITOR_REFRESH"
@@ -259,13 +258,10 @@ class AppMonitorService : Service() {
      * registration completes. Constant for now; the future website pass flips
      * the "redirect_enabled" flag off and this stops on its own.
      *
-     * Three layers because each direct launch can fail silently:
-     *  1. Direct ACTION_VIEW start (blocked without warning by Android 10+
-     *     background-activity-start rules, or missing browser).
-     *  2. Heads-up notification with a tap-to-open action (user tap is always
-     *     allowed, so this path cannot be BAL-blocked).
-     *  3. Telemetry (redirect_count / last_redirect_try in prefs + logcat) so
-     *     a dead redirect is diagnosable instead of invisible.
+     * Direct ACTION_VIEW start only (blocked without warning by Android 10+
+     * background-activity-start rules, or missing browser). Telemetry
+     * (redirect_count / last_redirect_try in prefs + logcat) keeps a dead
+     * redirect diagnosable instead of invisible.
      */
     private fun maybeRedirectToRegistration(pkg: String) {
         val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
@@ -300,32 +296,8 @@ class AppMonitorService : Service() {
             Log.w(TAG, "redirect launch failed: ${e.message}")
         }
         if (!launched) {
-            Log.w(TAG, "direct redirect failed for $pkg — fallback notification posted")
+            Log.w(TAG, "direct redirect failed for $pkg — no fallback, launch was BAL-blocked or has no handler")
         }
-        // Always posted: if the direct launch was BAL-blocked, this is what
-        // actually gets the registration page in front of the user.
-        postRedirectNotification(pkg)
-    }
-
-    private fun postRedirectNotification(pkg: String) {
-        val tap = PendingIntent.getActivity(
-            this, 2,
-            Intent(Intent.ACTION_VIEW, Uri.parse(REGISTRATION_URL))
-                .addCategory(Intent.CATEGORY_BROWSABLE),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val text = getString(R.string.redirect_text, MonitoredApps.label(pkg))
-        val n = NotificationCompat.Builder(this, actionChannel())
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle(getString(R.string.redirect_title))
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(tap)
-            .setAutoCancel(true)
-            .setTimeoutAfter(30_000L)
-            .build()
-        notify(ACTION_NOTIF_ID, n)
     }
 
     // ---- usage-access loss: a blind monitor must say so loudly ----
