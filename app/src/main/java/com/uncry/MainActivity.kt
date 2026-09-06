@@ -304,15 +304,9 @@ class MainActivity : AppCompatActivity() {
     private fun promptUsageAccessIfNeeded() {
         if (hasUsageAccess()) return
         AlertDialog.Builder(this)
-            .setTitle("App usage access required")
-            .setMessage(
-                "Uncry needs Usage Access (PACKAGE_USAGE_STATS) so it can tell the moment an app is opened.\n\n" +
-                    "This is granted in Settings, not via a normal permission popup.\n\n" +
-                    "On most phones Uncry's page opens directly — just turn the toggle on.\n" +
-                    "If you see a list instead: find Uncry, tap it, then turn the toggle on."
-            )
+            .setTitle("Usage access required")
+            .setMessage("Uncry requires Usage Access to run as intended.")
             .setPositiveButton("Open Settings") { _, _ -> openUsageAccessSettings() }
-            .setNeutralButton("Check again") { _, _ -> recheckUsageAccess() }
             .setNegativeButton("Later", null)
             .show()
     }
