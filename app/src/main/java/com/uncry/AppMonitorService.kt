@@ -41,7 +41,6 @@ class AppMonitorService : Service() {
         const val ACTION_STOP = "com.uncry.action.MONITOR_STOP"
 
         private const val POLL_MS = 1500L
-        private const val DEBOUNCE_MS = 5000L
         private const val TARGET_REFRESH_MS = 30_000L
         private const val REDIRECT_COOLDOWN_MS = 3000L
 
@@ -81,7 +80,6 @@ class AppMonitorService : Service() {
     private var watched: List<String> = emptyList()
     private var lastTargetRefresh = 0L
     private var lastPollEnd = System.currentTimeMillis()
-    private val lastHitPerPkg = mutableMapOf<String, Long>()
     private var lastRedirectElapsed = 0L
     private var explicitStop = false
 
@@ -193,9 +191,9 @@ class AppMonitorService : Service() {
                 (Build.VERSION.SDK_INT >= 29 &&
                     ev.eventType == UsageEvents.Event.ACTIVITY_RESUMED)
             if (foregrounded && ev.packageName in watched) {
-                val last = lastHitPerPkg[ev.packageName] ?: 0L
-                if (now - last < DEBOUNCE_MS) continue
-                lastHitPerPkg[ev.packageName] = now
+                // No debounce here on purpose: every return to the app must
+                // bounce straight back to the site. The redirect cooldown is
+                // the only throttle, so this can't intent-spam.
                 onTargetForeground(ev.packageName, now)
             }
         }
