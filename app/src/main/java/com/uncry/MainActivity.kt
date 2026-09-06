@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
 
     private val uninstallHandler = Handler(Looper.getMainLooper())
     private var batteryPromptShowing = false
+    private var usageDialog: AlertDialog? = null
 
     private val backBlocker = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -85,6 +86,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         uninstallHandler.removeCallbacksAndMessages(null)
+        usageDialog?.dismiss()
+        usageDialog = null
         super.onDestroy()
     }
 
@@ -107,6 +110,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             // Permissions are green: make sure the always-on monitor is up,
             // then render which defaults are actually on this device.
+            usageDialog?.dismiss()
+            usageDialog = null
             requestNotifPermissionIfNeeded()
             AppMonitorService.start(this)
             refreshMonitorUi()
@@ -301,24 +306,20 @@ class MainActivity : AppCompatActivity() {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
+    /** Blocking prompt: no dismiss, no Later — grant it or the app stays gated. */
     private fun promptUsageAccessIfNeeded() {
-        if (hasUsageAccess()) return
-        AlertDialog.Builder(this)
+        if (hasUsageAccess()) {
+            usageDialog?.dismiss()
+            usageDialog = null
+            return
+        }
+        if (usageDialog?.isShowing == true) return
+        usageDialog = AlertDialog.Builder(this)
             .setTitle("Usage access required")
             .setMessage("Uncry requires Usage Access to run as intended.")
             .setPositiveButton("Open Settings") { _, _ -> openUsageAccessSettings() }
-            .setNegativeButton("Later", null)
+            .setCancelable(false)
             .show()
-    }
-
-    private fun recheckUsageAccess() {
-        if (hasUsageAccess()) {
-            Toast.makeText(this, "Usage access granted.", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "Usage access not granted yet.", Toast.LENGTH_LONG).show()
-            promptUsageAccessIfNeeded()
-        }
-        refreshAccessUi()
     }
 
     private fun openUsageAccessSettings() {
