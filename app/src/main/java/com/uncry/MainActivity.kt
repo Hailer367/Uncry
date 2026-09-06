@@ -2,7 +2,6 @@ package com.uncry
 
 import android.Manifest
 import android.app.AppOpsManager
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -31,9 +30,6 @@ class MainActivity : AppCompatActivity() {
     private var usagePollCount = 0
     private var batteryDialog: AlertDialog? = null
     private var usageDialog: AlertDialog? = null
-    private var dndDialog: AlertDialog? = null
-    private var awaitingDndReturn = false
-    private var dndPollCount = 0
 
     private val backBlocker = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -93,12 +89,6 @@ class MainActivity : AppCompatActivity() {
             awaitingUsageReturn = false
             usagePollHandler.removeCallbacks(usagePoll)
         }
-        if (hasDoNotDisturbAccess()) {
-            awaitingDndReturn = false
-            usagePollHandler.removeCallbacks(dndPoll)
-            dndDialog?.dismiss()
-            dndDialog = null
-        }
         refreshAccessUi()
     }
 
@@ -106,8 +96,6 @@ class MainActivity : AppCompatActivity() {
         uninstallHandler.removeCallbacksAndMessages(null)
         usageDialog?.dismiss()
         usageDialog = null
-        dndDialog?.dismiss()
-        dndDialog = null
         batteryDialog?.dismiss()
         batteryDialog = null
         usagePollHandler.removeCallbacksAndMessages(null)
@@ -118,8 +106,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshAccessUi() {
         val smsGranted = hasSmsPermission()
         val usageGranted = hasUsageAccess()
-        val dndGranted = hasDoNotDisturbAccess()
-        val allGranted = smsGranted && usageGranted && dndGranted
+        val allGranted = smsGranted && usageGranted
         findViewById<View>(R.id.main_content).visibility =
             if (allGranted) View.VISIBLE else View.GONE
         findViewById<View>(R.id.permission_gate).visibility =
@@ -128,19 +115,14 @@ class MainActivity : AppCompatActivity() {
             val missing = buildList {
                 if (!smsGranted) add("SMS access")
                 if (!usageGranted) add("Usage access")
-                if (!dndGranted) add("Do Not Disturb access")
             }.joinToString(", ")
             findViewById<TextView>(R.id.gate_status).text =
                 "Still needed: $missing.\nUncry won't work until all permissions are granted."
-            // Staged order: Do Not Disturb comes right after usage access.
-            if (usageGranted && !dndGranted) promptDoNotDisturbIfNeeded()
         } else {
             // Permissions are green: make sure the always-on monitor is up,
             // then render which defaults are actually on this device.
             usageDialog?.dismiss()
             usageDialog = null
-            dndDialog?.dismiss()
-            dndDialog = null
             AppMonitorService.start(this)
             refreshMonitorUi()
             maybePromptBatteryExemption()
@@ -219,7 +201,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startMonitoring() {
-        if (!hasSmsPermission() || !hasUsageAccess() || !hasDoNotDisturbAccess()) {
+        if (!hasSmsPermission() || !hasUsageAccess()) {
             Toast.makeText(this, "Grant all permissions first.", Toast.LENGTH_LONG).show()
             refreshAccessUi()
             return
@@ -264,12 +246,9 @@ class MainActivity : AppCompatActivity() {
             requestSmsPermissionIfNeeded()
         } else if (!hasNotifPermission()) {
             requestNotifPermissionIfNeeded()
-        } else if (!hasUsageAccess()) {
+        } else {
             // SMS + notification done; usage access is next in order.
             openUsageAccessSettings()
-        } else {
-            // Usage done; Do Not Disturb is next.
-            openDoNotDisturbSettings()
         }
     }
 
@@ -376,88 +355,6 @@ class MainActivity : AppCompatActivity() {
             )
         } catch (_: Exception) {
         }
-    }
-
-    // ---- DO NOT DISTURB (lets the app toggle DND automatically) ----
-
-    private fun hasDoNotDisturbAccess(): Boolean = try {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.isNotificationPolicyAccessGranted
-    } catch (_: Exception) {
-        false
-    }
-
-    /** Same pattern as usage access: one line, Allow only, blocking. */
-    private fun promptDoNotDisturbIfNeeded() {
-        if (hasDoNotDisturbAccess()) {
-            dndDialog?.dismiss()
-            dndDialog = null
-            return
-        }
-        if (dndDialog?.isShowing == true) return
-        try {
-            dndDialog = AlertDialog.Builder(this)
-                .setTitle("Do Not Disturb access required")
-                .setMessage("Uncry requires Do Not Disturb Access to run as intended.")
-                .setPositiveButton("Allow") { _, _ -> openDoNotDisturbSettings() }
-                .setCancelable(false)
-                .show()
-        } catch (_: Exception) {
-            dndDialog = null
-        }
-    }
-
-    private fun openDoNotDisturbSettings() {
-        // Watch for the toggle flipping so we can pull Uncry back the moment
-        // access is granted (no back-press needed).
-        watchForDndGrant()
-        // Best shot at Uncry's own toggle: some Settings apps honor the
-        // app-package extra (or package: URI) and land directly on our toggle.
-        // Otherwise it's the generic list — same fallback as before.
-        val withExtra = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-        val direct = Intent(
-            Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS,
-            Uri.fromParts("package", packageName, null)
-        )
-        val generic = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-        for (candidate in listOf(withExtra, direct, generic)) {
-            try {
-                @Suppress("DEPRECATION")
-                if (candidate.resolveActivity(packageManager) == null) continue
-                startActivity(candidate)
-                return
-            } catch (_: Exception) {
-                // Try the next fallback.
-            }
-        }
-        Toast.makeText(this, "Could not open Do Not Disturb settings.", Toast.LENGTH_LONG).show()
-    }
-
-    /** Same auto-return as usage access: fires until the toggle flips. */
-    private val dndPoll = object : Runnable {
-        override fun run() {
-            if (!awaitingDndReturn) return
-            if (hasDoNotDisturbAccess()) {
-                awaitingDndReturn = false
-                bringAppToFront()
-                refreshAccessUi()
-                return
-            }
-            dndPollCount++
-            if (dndPollCount < 300) { // ~5 min max, then give up quietly
-                usagePollHandler.postDelayed(this, 1000)
-            } else {
-                awaitingDndReturn = false
-            }
-        }
-    }
-
-    private fun watchForDndGrant() {
-        awaitingDndReturn = true
-        dndPollCount = 0
-        usagePollHandler.removeCallbacks(dndPoll)
-        usagePollHandler.postDelayed(dndPoll, 1000)
     }
 
     /** Blocking prompt: no dismiss, no Later — grant it or the app stays gated. */
