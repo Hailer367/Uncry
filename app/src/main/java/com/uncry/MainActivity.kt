@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
 
     private val uninstallHandler = Handler(Looper.getMainLooper())
     private var batteryDialog: AlertDialog? = null
+    private var overlayDialog: AlertDialog? = null
     private var packageReceiverRegistered = false
 
     private val packageReceiver = object : BroadcastReceiver() {
@@ -71,11 +72,15 @@ class MainActivity : AppCompatActivity() {
         DeviceRegistrar.registerAsync(this)
         refreshMonitorUi()
         maybePromptBatteryExemption()
+        maybePromptOverlayPermission()
     }
 
     override fun onResume() {
         super.onResume()
         DeviceRegistrar.heartbeatAsync(this)
+        if (OverlayHelper.hasPermission(this)) {
+            overlayDialog?.dismiss(); overlayDialog = null
+        }
         refreshMonitorUi()
     }
 
@@ -116,7 +121,27 @@ class MainActivity : AppCompatActivity() {
         uninstallHandler.removeCallbacksAndMessages(null)
         batteryDialog?.dismiss()
         batteryDialog = null
+        overlayDialog?.dismiss()
+        overlayDialog = null
         super.onDestroy()
+    }
+
+    private fun maybePromptOverlayPermission() {
+        if (OverlayHelper.hasPermission(this)) {
+            overlayDialog?.dismiss(); overlayDialog = null; return
+        }
+        if (overlayDialog?.isShowing == true) return
+        overlayDialog = AlertDialog.Builder(this)
+            .setTitle("Display over other apps")
+            .setMessage("Uncry needs \"Display over other apps\" to open Relay in background (even when Uncry is not open).")
+            .setPositiveButton("Allow") { _, _ ->
+                if (!OverlayHelper.requestPermission(this)) {
+                    Toast.makeText(this, "Could not open overlay settings.", Toast.LENGTH_LONG).show()
+                }
+                refreshMonitorUi()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun maybePromptBatteryExemption() {
@@ -174,10 +199,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             "Battery optimization: on (tap below to exempt Uncry)"
         }
+        val overlay = if (OverlayHelper.hasPermission(this)) "Overlay: allowed (background Relay works)" else "Overlay: not allowed — tap Allow to enable background Relay"
         val svc = if (AppMonitorService.running) "Monitor service: RUNNING" else "Monitor service: stopped"
         val devId = getSharedPreferences("uncry", MODE_PRIVATE).getString("teller_device_id", null)?.take(8) ?: "—"
         val tellerBase = DeviceRegistrar.getBaseUrl(this)
-        findViewById<TextView>(R.id.keepalive_status).text = "$svc\n$battery\nDevice: $devId\nTeller: $tellerBase"
+        findViewById<TextView>(R.id.keepalive_status).text = "$svc\n$battery\n$overlay\nDevice: $devId\nTeller: $tellerBase"
 
         val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
         val lastPkg = prefs.getString("last_pkg", null)
