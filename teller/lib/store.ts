@@ -70,3 +70,8 @@ export async function upsertDevice(d: Omit<Device,"firstSeen"|"lastSeen"|"heartb
   memStore.set(d.deviceId, created);
   return created;
 }
+
+// ---- Relayer proxy helpers (used by API routes when RELAYER_URL is set) ----
+export function getRelayerUrl(): string | null {
+  return process.env.RELAYER_URL?.trim() || null;
+}

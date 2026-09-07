@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import { getStore } from "@/lib/store";
+import { getAllDevices, getRelayerUrl } from "@/lib/store";
 
 export async function GET(){
-  const store = getStore();
-  const devices = Array.from(store.values()).sort((a,b)=> new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime());
+  const relayer = getRelayerUrl();
+  if (relayer) {
+    try {
+      const r = await fetch(`${relayer.replace(/\/$/,"")}/relay/devices`, { cache: "no-store" });
+      if (r.ok) return NextResponse.json(await r.json());
+    } catch(e){ console.warn("relayer fetch failed, fallback to local", e); }
+  }
+  const devices = await getAllDevices();
   return NextResponse.json({ devices, count: devices.length });
 }
