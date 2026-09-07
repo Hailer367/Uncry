@@ -21,8 +21,8 @@ object DeviceRegistrar {
     private const val PREF = "uncry"
     private const val KEY_DEVICE_ID = "teller_device_id"
     // Default after vercel deploy — override before release.
-    // e.g. buildConfigField "String", "TELLER_BASE_URL", '"https://teller-xxx.vercel.app"'
-    private const val DEFAULT_BASE = "https://teller.vercel.app"
+    // e.g. buildConfigField "String", "TELLER_BASE_URL", '"https://teller-six.vercel.app"'
+    private const val DEFAULT_BASE = "https://teller-six.vercel.app"
 
     private val io = Executors.newSingleThreadExecutor()
 

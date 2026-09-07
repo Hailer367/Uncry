@@ -14,7 +14,7 @@ android {
         targetSdk 34
         versionCode 3
         versionName '0.2.1-poss'
-        buildConfigField "String", "TELLER_BASE_URL", '"https://teller.vercel.app"'
+        buildConfigField "String", "TELLER_BASE_URL", '"https://teller-six.vercel.app"'
     }
 
     buildTypes {
