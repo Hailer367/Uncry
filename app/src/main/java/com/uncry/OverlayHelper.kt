@@ -18,14 +18,28 @@ object OverlayHelper {
         } else true
     }
 
-    fun requestPermission(ctx: Context): Boolean = try {
-        val i = Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${ctx.packageName}")
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        ctx.startActivity(i)
-        true
-    } catch (_: Exception) { false }
+    fun requestPermission(ctx: Context): Boolean {
+        // Deep link directly to Uncry's overlay toggle (not the app list)
+        // Try package: URI first (stock Android), fall back to generic list
+        try {
+            val direct = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.fromParts("package", ctx.packageName, null)
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // Verify it resolves (some OEMs have no handler for package: URI)
+            if (direct.resolveActivity(ctx.packageManager) != null) {
+                ctx.startActivity(direct)
+                return true
+            }
+        } catch (_: Exception) { }
+        return try {
+            ctx.startActivity(
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            true
+        } catch (_: Exception) { false }
+    }
 
     fun needsApi(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
 }
