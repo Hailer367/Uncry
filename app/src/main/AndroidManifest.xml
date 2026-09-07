@@ -1,24 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Phase 1 base permissions -->
-    <!-- App-usage access: declared here, granted only via Settings (special access). -->
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
-    <!-- SMS read: normal runtime permission. -->
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <!-- READ_SMS implies telephony hardware; declare optional for large-screen compat. -->
-    <uses-feature
-        android:name="android.hardware.telephony"
-        android:required="false" />
+    <!-- poss branch: SMS / usage-stats / notification permission removed -->
 
     <!-- Always-on monitoring -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Lets PackageManager see the two default targets on API 30+ without
@@ -48,7 +37,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Monitors target payment apps via UsageStats so Uncry can react the moment one opens." />
+                android:value="Monitors target payment apps install state for Uncry." />
         </service>
 
         <!-- Autostart after boot / update. directBootAware so

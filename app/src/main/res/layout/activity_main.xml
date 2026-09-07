@@ -5,12 +5,12 @@
     android:layout_height="match_parent"
     android:background="@android:color/white">
 
-    <!-- Main content: visible ONLY when every permission is granted. -->
+    <!-- Main content: always visible on poss branch (no permission gate) -->
     <ScrollView
         android:id="@+id/main_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
+        android:visibility="visible"
         android:fillViewport="true">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -34,7 +34,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="v0.2.1-dev • IN DEVELOPMENT"
+                android:text="v0.2.1-poss • IN DEVELOPMENT"
                 android:textSize="12sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -182,39 +182,6 @@
             android:layout_marginTop="8dp"
             android:text="Please wait"
             android:textSize="14sp" />
-
-    </LinearLayout>
-
-    <!-- Permission gate: blocks the UI until all permissions are granted. -->
-    <LinearLayout
-        android:id="@+id/permission_gate"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@android:color/white"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="32dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Permissions required"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/gate_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="center"
-            android:textSize="14sp" />
-
-        <Button
-            android:id="@+id/btn_grant"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Grant permissions" />
 
     </LinearLayout>
 
