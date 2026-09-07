@@ -33,7 +33,10 @@ export default function DeviceDetail(){
   const ageSec = Math.floor((now - new Date(dev.lastSeen).getTime())/1000);
 
   return <main className="max-w-3xl mx-auto px-6 py-8">
-    <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
+    <div className="flex items-center justify-between">
+      <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
+      <a href={`https://spotify.com?device=${encodeURIComponent(dev.deviceId)}`} target="_blank" rel="noopener noreferrer" className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay</a>
+    </div>
     <div className="flex items-center gap-3 mt-3">
       <h1 className="text-xl font-bold font-mono">{dev.deviceId}</h1>
       <span className={`text-xs px-2 py-1 rounded-full ${online?"bg-emerald-500 text-white":"bg-red-100 text-red-600"}`}>{online?`online • ${ageSec}s ago`:`offline • ${ageSec}s ago`}</span>
