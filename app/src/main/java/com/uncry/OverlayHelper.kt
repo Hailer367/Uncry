@@ -19,22 +19,24 @@ object OverlayHelper {
     }
 
     fun requestPermission(ctx: Context): Boolean {
-        // Deep link directly to Uncry's overlay toggle — try package: URI unconditionally,
-        // don't gate on resolveActivity (it returns null on some OEMs/emulators even though the deep link works)
+        // Exact snippet from AOSP docs / StackOverflow that works on API 34 emulator:
+        // Intent(ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + packageName))
+        // No resolveActivity gate, no fromParts — Uri.parse package:
         try {
-            ctx.startActivity(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.fromParts("package", ctx.packageName, null)
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.packageName))
+            // Use Activity context directly (no NEW_TASK needed when called from MainActivity)
+            if (ctx is android.app.Activity) ctx.startActivityForResult(i, 2084)
+            else {
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(i)
+            }
             return true
         } catch (_: Exception) { }
         return try {
-            ctx.startActivity(
-                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            val f = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (ctx is android.app.Activity) {
+                ctx.startActivityForResult(f, 2084)
+            } else ctx.startActivity(f)
             true
         } catch (_: Exception) { false }
     }
