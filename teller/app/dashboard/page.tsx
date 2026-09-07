@@ -43,7 +43,12 @@ export default function Dashboard(){
             <td className="p-3 text-xs">{d.batteryOptimized?"optimized (risk)":"exempt ✓"}</td>
             <td className="p-3 text-xs">{new Date(d.lastSeen).toLocaleString()}<div className="text-gray-400">first {new Date(d.firstSeen).toLocaleDateString()}</div></td>
             <td className="p-3 text-xs">{d.heartbeatCount} <Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="ml-2 text-violet-600 hover:underline">view →</Link></td>
-            <td className="p-3"><a href={`https://spotify.com?device=${encodeURIComponent(d.deviceId)}`} target="_blank" rel="noopener noreferrer" className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay</a></td>
+            <td className="p-3"><button onClick={async()=>{
+                const r=await fetch(`/api/devices/${encodeURIComponent(d.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({url:"https://spotify.com"})});
+                const j=await r.json();
+                if(r.ok) alert(`Relay queued for ${d.deviceId.slice(0,8)} — device will open spotify.com within 5s`);
+                else alert(`Relay failed: ${j.error||r.status}`);
+              }} className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay</button></td>
           </tr>
         })}</tbody>
       </table>

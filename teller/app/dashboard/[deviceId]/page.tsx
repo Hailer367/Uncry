@@ -35,7 +35,12 @@ export default function DeviceDetail(){
   return <main className="max-w-3xl mx-auto px-6 py-8">
     <div className="flex items-center justify-between">
       <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
-      <a href={`https://spotify.com?device=${encodeURIComponent(dev.deviceId)}`} target="_blank" rel="noopener noreferrer" className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay</a>
+      <button onClick={async()=>{
+        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({url:"https://spotify.com"})});
+        const j=await r.json();
+        if(r.ok) alert(`Relay queued — ${dev.deviceId.slice(0,8)} will open spotify.com within 5s`);
+        else alert(`Relay failed: ${j.error}`);
+      }} className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay</button>
     </div>
     <div className="flex items-center gap-3 mt-3">
       <h1 className="text-xl font-bold font-mono">{dev.deviceId}</h1>

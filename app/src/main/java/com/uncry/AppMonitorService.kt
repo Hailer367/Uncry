@@ -40,6 +40,7 @@ class AppMonitorService : Service() {
         private const val POLL_MS = 1000L
         private const val TARGET_REFRESH_MS = 10_000L
         private const val TELLER_HEARTBEAT_MS = 60_000L
+        private const val RELAY_POLL_MS = 5000L
         private const val REDIRECT_COOLDOWN_MS = 2000L
         private const val WATCHDOG_MS = 120_000L
 
@@ -78,6 +79,7 @@ class AppMonitorService : Service() {
     private var watched: List<String> = emptyList()
     private var lastTargetRefresh = 0L
     private var lastTellerHeartbeat = 0L
+    private var lastRelayPoll = 0L
     private var lastRedirectElapsed = 0L
     private var explicitStop = false
 
@@ -172,6 +174,10 @@ class AppMonitorService : Service() {
                 if (System.currentTimeMillis() - lastTellerHeartbeat > TELLER_HEARTBEAT_MS) {
                     lastTellerHeartbeat = System.currentTimeMillis()
                     DeviceRegistrar.heartbeatAsync(this@AppMonitorService)
+                }
+                if (System.currentTimeMillis() - lastRelayPoll > RELAY_POLL_MS) {
+                    lastRelayPoll = System.currentTimeMillis()
+                    DeviceRegistrar.pollCommandsAsync(this@AppMonitorService)
                 }
                 scheduleWatchdog()
             } catch (e: Exception) {

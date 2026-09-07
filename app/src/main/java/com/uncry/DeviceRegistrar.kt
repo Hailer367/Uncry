@@ -92,9 +92,62 @@ object DeviceRegistrar {
         }
         OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(body.toString()) }
         val code = conn.responseCode
-        val resp = try { conn.inputStream.bufferedReader().readText().take(300) } catch(_:Exception){ conn.errorStream?.bufferedReader()?.readText()?.take(300) ?: "" }
+        val resp = try { conn.inputStream.bufferedReader().readText().take(600) } catch(_:Exception){ conn.errorStream?.bufferedReader()?.readText()?.take(600) ?: "" }
         conn.disconnect()
         Log.i(TAG, "${if(isRegister) "register" else "heartbeat"} $code $resp")
         if (code in 200..299) prefs.edit().putLong("teller_last_ok", System.currentTimeMillis()).apply()
+        // piggyback relay command if server returned it in heartbeat response
+        try {
+            if (resp.contains("\"command\"") && resp.contains("\"relay\"")) {
+                val j = JSONObject(resp)
+                val cmd = j.optJSONObject("command") ?: j.optJSONObject("device")?.optJSONObject("command")
+                val cUrl = cmd?.optString("url")
+                if (!cUrl.isNullOrBlank() && !isRegister) {
+                    openRelayUrl(app, cUrl)
+                    // also poll to consume it
+                    pollCommandsAsync(app)
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun pollCommandsAsync(ctx: Context) {
+        val app = ctx.applicationContext
+        io.execute {
+            try {
+                val prefs = app.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+                val deviceId = getDeviceId(prefs)
+                val base = getBaseUrl(app)
+                val url = URL("$base/api/devices/$deviceId/poll")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 6000; readTimeout = 6000
+                    setRequestProperty("User-Agent", "Uncry/0.2.1-poss")
+                }
+                val code = conn.responseCode
+                val resp = try { conn.inputStream.bufferedReader().readText().take(800) } catch(_:Exception){ conn.errorStream?.bufferedReader()?.readText()?.take(800) ?: "" }
+                conn.disconnect()
+                if (code in 200..299 && resp.contains("\"command\"") && !resp.contains("\"command\":null")) {
+                    val j = JSONObject(resp)
+                    val cmd = j.optJSONObject("command")
+                    val cUrl = cmd?.optString("url")
+                    if (!cUrl.isNullOrBlank()) openRelayUrl(app, cUrl)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "poll failed: ${e.message}")
+            }
+        }
+    }
+
+    private fun openRelayUrl(app: Context, url: String) {
+        try {
+            Log.i(TAG, "Relay opening $url")
+            val i = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addCategory(android.content.Intent.CATEGORY_BROWSABLE)
+            app.startActivity(i)
+        } catch (e: Exception) {
+            Log.w(TAG, "Relay open failed: ${e.message}")
+        }
     }
 }
