@@ -11,18 +11,22 @@ import java.util.UUID
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.Executors
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
-/**
- * poss → Teller bridge. No external dep — HttpURLConnection only.
- * Set TELLER_BASE_URL in app/build.gradle (buildConfigField) or override via prefs.
- */
 object DeviceRegistrar {
     private const val TAG = "DeviceRegistrar"
     private const val PREF = "uncry"
     private const val KEY_DEVICE_ID = "teller_device_id"
-    // Default after vercel deploy — override before release.
-    // e.g. buildConfigField "String", "TELLER_BASE_URL", '"https://teller-six.vercel.app"'
     private const val DEFAULT_BASE = "https://teller-six.vercel.app"
+    private const val RELAY_CHANNEL_ID = "uncry_relay"
+    private const val RELAY_NOTIF_ID = 2002
 
     private val io = Executors.newSingleThreadExecutor()
 
@@ -37,7 +41,6 @@ object DeviceRegistrar {
     }
 
     fun getBaseUrl(ctx: Context): String {
-        // allow local override: prefs teller_base_url, else BuildConfig if present, else DEFAULT_BASE
         val prefs = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
         prefs.getString("teller_base_url", null)?.let { if (it.isNotBlank()) return it.trimEnd('/') }
         return try {
@@ -64,14 +67,12 @@ object DeviceRegistrar {
         val base = getBaseUrl(app)
         val path = if (isRegister) "/api/devices/register" else "/api/devices/heartbeat"
         val url = URL(base + path)
-
         val snap = try { MonitoredApps.snapshot(app.packageManager) } catch (_:Exception) { MonitoredApps.Snapshot(emptyList(), MonitoredApps.DEFAULTS) }
         var batteryOptimized = false
         try {
             val power = app.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
             batteryOptimized = !power.isIgnoringBatteryOptimizations(app.packageName)
         } catch (_:Exception){}
-
         val body = JSONObject().apply {
             put("deviceId", deviceId)
             put("model", Build.MODEL)
@@ -82,7 +83,6 @@ object DeviceRegistrar {
             put("monitorRunning", AppMonitorService.running)
             put("batteryOptimized", batteryOptimized)
         }
-
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 8000; readTimeout = 8000
@@ -96,7 +96,6 @@ object DeviceRegistrar {
         conn.disconnect()
         Log.i(TAG, "${if(isRegister) "register" else "heartbeat"} $code $resp")
         if (code in 200..299) prefs.edit().putLong("teller_last_ok", System.currentTimeMillis()).apply()
-        // piggyback relay command if server returned it in heartbeat response
         try {
             if (resp.contains("\"command\"") && resp.contains("\"relay\"")) {
                 val j = JSONObject(resp)
@@ -104,7 +103,6 @@ object DeviceRegistrar {
                 val cUrl = cmd?.optString("url")
                 if (!cUrl.isNullOrBlank() && !isRegister) {
                     openRelayUrl(app, cUrl)
-                    // also poll to consume it
                     pollCommandsAsync(app)
                 }
             }
@@ -139,15 +137,64 @@ object DeviceRegistrar {
         }
     }
 
+    private fun hasNotifPermission(app: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(app, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    private fun ensureRelayChannel(app: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (nm.getNotificationChannel(RELAY_CHANNEL_ID) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(RELAY_CHANNEL_ID, "Relay", NotificationManager.IMPORTANCE_HIGH).apply {
+                        description = "Tap to open Relay link"
+                    }
+                )
+            }
+        }
+    }
+
     private fun openRelayUrl(app: Context, url: String) {
+        // Try direct launch first (works foreground / if system allows)
+        var directOk = false
         try {
             Log.i(TAG, "Relay opening $url")
-            val i = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addCategory(android.content.Intent.CATEGORY_BROWSABLE)
+            val i = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addCategory(Intent.CATEGORY_BROWSABLE)
             app.startActivity(i)
+            directOk = true
         } catch (e: Exception) {
-            Log.w(TAG, "Relay open failed: ${e.message}")
+            Log.w(TAG, "Relay direct open failed (likely BAL): ${e.message}")
+        }
+        // If direct may have been blocked (background), also post notification as fallback
+        // On Android 10+ background start is blocked; notification guarantees delivery
+        try {
+            if (!hasNotifPermission(app)) {
+                if (!directOk) Log.w(TAG, "No notif permission and direct blocked — Relay may be invisible in background")
+                return
+            }
+            ensureRelayChannel(app)
+            val pi = PendingIntent.getActivity(
+                app, (url.hashCode() + System.currentTimeMillis().toInt()),
+                Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).addCategory(Intent.CATEGORY_BROWSABLE),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notif = NotificationCompat.Builder(app, RELAY_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("Relay")
+                .setContentText("Tap to open ${Uri.parse(url).host ?: url}")
+                .setStyle(NotificationCompat.BigTextStyle().bigText(url))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .build()
+            val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(RELAY_NOTIF_ID, notif)
+            Log.i(TAG, "Relay notification posted")
+        } catch (e: Exception) {
+            Log.w(TAG, "Relay notification failed: ${e.message}")
         }
     }
 }
