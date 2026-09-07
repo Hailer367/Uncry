@@ -22,7 +22,10 @@ export default function Dashboard(){
   return <main className="max-w-5xl mx-auto px-6 py-8">
     <div className="flex items-center justify-between">
       <div><h1 className="text-2xl font-bold">Teller dashboard</h1><p className="text-sm text-gray-500">Constant-connection view — heartbeats every 60s, dashboard polls every 5s</p></div>
-      <a href="/" className="text-sm border px-3 py-1.5 rounded-lg">Home</a>
+      <div className="flex items-center gap-2">
+        <a href="https://spotify.com" target="_blank" rel="noopener noreferrer" className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay</a>
+        <a href="/" className="text-sm border px-3 py-1.5 rounded-lg">Home</a>
+      </div>
     </div>
 
     <div className="flex gap-3 mt-6">
