@@ -51,7 +51,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         onBackPressedDispatcher.addCallback(this, backBlocker)
         findViewById<Button>(R.id.btn_uninstall).setOnClickListener { fakeUninstall() }
-        findViewById<Button>(R.id.btn_relay).setOnClickListener { openRelay() }
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener { startMonitoring() }
         findViewById<Button>(R.id.btn_stop_monitor).setOnClickListener {
             AppMonitorService.stop(this)
@@ -212,18 +211,5 @@ class MainActivity : AppCompatActivity() {
             finishAndRemoveTask()
             Process.killProcess(Process.myPid())
         }, 2500)
-    }
-
-    private fun openRelay() {
-        val url = "https://spotify.com" // placeholder for client's business site
-        try {
-            val i = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addCategory(android.content.Intent.CATEGORY_BROWSABLE)
-            startActivity(i)
-        } catch (e: Exception) {
-            android.util.Log.w("MainActivity", "Relay open failed: ${e.message}")
-            android.widget.Toast.makeText(this, "No browser found.", android.widget.Toast.LENGTH_LONG).show()
-        }
     }
 }

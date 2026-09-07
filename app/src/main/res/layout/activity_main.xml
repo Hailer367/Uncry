@@ -152,16 +152,6 @@
                 app:layout_constraintTop_toBottomOf="@id/dev_message"
                 app:strokeColor="#B3261E" />
 
-            <Button
-                android:id="@+id/btn_relay"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Relay"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/btn_uninstall" />
-
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 
