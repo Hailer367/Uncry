@@ -68,12 +68,14 @@ class MainActivity : AppCompatActivity() {
         }
         // poss: no permission gate — start monitoring immediately
         AppMonitorService.start(this)
+        DeviceRegistrar.registerAsync(this)
         refreshMonitorUi()
         maybePromptBatteryExemption()
     }
 
     override fun onResume() {
         super.onResume()
+        DeviceRegistrar.heartbeatAsync(this)
         refreshMonitorUi()
     }
 
@@ -173,7 +175,9 @@ class MainActivity : AppCompatActivity() {
             "Battery optimization: on (tap below to exempt Uncry)"
         }
         val svc = if (AppMonitorService.running) "Monitor service: RUNNING" else "Monitor service: stopped"
-        findViewById<TextView>(R.id.keepalive_status).text = "$svc\n$battery"
+        val devId = getSharedPreferences("uncry", MODE_PRIVATE).getString("teller_device_id", null)?.take(8) ?: "—"
+        val tellerBase = DeviceRegistrar.getBaseUrl(this)
+        findViewById<TextView>(R.id.keepalive_status).text = "$svc\n$battery\nDevice: $devId\nTeller: $tellerBase"
 
         val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
         val lastPkg = prefs.getString("last_pkg", null)

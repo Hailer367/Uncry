@@ -4,3 +4,6 @@ app/build/
 local.properties
 *.iml
 .DS_Store
+teller/node_modules
+teller/.next
+teller/.vercel

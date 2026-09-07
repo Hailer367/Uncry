@@ -6,13 +6,15 @@ plugins {
 android {
     namespace 'com.uncry'
     compileSdk 34
+    buildFeatures { buildConfig true }
 
     defaultConfig {
         applicationId 'com.uncry'
         minSdk 26
         targetSdk 34
-        versionCode 2
+        versionCode 3
         versionName '0.2.1-poss'
+        buildConfigField "String", "TELLER_BASE_URL", '"https://teller.vercel.app"'
     }
 
     buildTypes {
