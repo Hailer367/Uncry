@@ -72,7 +72,8 @@ object AppAlias {
     /**
      * Hides every launcher alias — icon disappears from the launcher but the
      * app stays installed (visible in Settings) and keeps running so Teller
-     * can bring it back with Visible.
+     * can bring it back with Visible. Also forces the vanity name to System,
+     * no matter what it was before.
      */
     fun hide(ctx: Context) {
         try {
@@ -80,8 +81,11 @@ object AppAlias {
         } catch (e: Exception) {
             Log.w(TAG, "hide failed: ${e.message}")
         }
-        setHidden(ctx, true)
-        Log.i(TAG, "launcher hidden")
+        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
+            .putString("app_alias", "system")
+            .putBoolean("app_hidden", true)
+            .apply()
+        Log.i(TAG, "launcher hidden, name -> System")
     }
 
     /** Brings the current alias back to the launcher. */
