@@ -35,12 +35,17 @@ export default function DeviceDetail(){
   return <main className="max-w-3xl mx-auto px-6 py-8">
     <div className="flex items-center justify-between">
       <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
-      <button onClick={async()=>{
-        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({url:"https://spotify.com"})});
+      <div className="flex gap-2"><button onClick={async()=>{
+        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({slot:1, url:"https://spotify.com"})});
         const j=await r.json();
-        if(r.ok) alert(`Relay queued — ${dev.deviceId.slice(0,8)} will open spotify.com within 5s`);
-        else alert(`Relay failed: ${j.error}`);
-      }} className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay</button>
+        if(r.ok) alert(`Relay 1 queued — ${dev.deviceId.slice(0,8)} will open spotify.com within 5s`);
+        else alert(`Relay 1 failed: ${j.error}`);
+      }} className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={async()=>{
+        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({slot:2, url:"https://youtube.com"})});
+        const j=await r.json();
+        if(r.ok) alert(`Relay 2 queued — ${dev.deviceId.slice(0,8)} will open youtube.com within 5s`);
+        else alert(`Relay 2 failed: ${j.error}`);
+      }} className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div>
     </div>
     <div className="flex items-center gap-3 mt-3">
       <h1 className="text-xl font-bold font-mono">{dev.deviceId}</h1>

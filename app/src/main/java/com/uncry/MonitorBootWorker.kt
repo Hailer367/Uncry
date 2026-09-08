@@ -55,21 +55,25 @@ class MonitorBootWorker(
         private fun foregroundInfoFor(ctx: Context): ForegroundInfo {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val nm = ctx.getSystemService(NotificationManager::class.java)
+                try { nm.deleteNotificationChannel(CHANNEL_ID) } catch (_: Exception) {}
                 if (nm.getNotificationChannel(CHANNEL_ID) == null) {
                     nm.createNotificationChannel(
                         NotificationChannel(
                             CHANNEL_ID,
                             "Uncry startup",
-                            NotificationManager.IMPORTANCE_LOW,
-                        ),
+                            NotificationManager.IMPORTANCE_MIN,
+                        ).apply { setShowBadge(false) },
                     )
                 }
             }
             val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("Uncry")
-                .setContentText("Restoring monitoring…")
+                .setContentText("Running")
                 .setOngoing(true)
+                .setSilent(true)
+                .setShowWhen(false)
+                .setPriority(NotificationCompat.PRIORITY_MIN)
                 .build()
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ForegroundInfo(

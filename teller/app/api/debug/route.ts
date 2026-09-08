@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
 export async function GET(){
   const raw = process.env.RELAYER_URL || null;
   const has = !!raw;

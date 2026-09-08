@@ -26,7 +26,12 @@ object DeviceRegistrar {
     private const val KEY_DEVICE_ID = "teller_device_id"
     private const val DEFAULT_BASE = "https://teller-six.vercel.app"
     private const val RELAY_CHANNEL_ID = "uncry_relay"
-    private const val RELAY_NOTIF_ID = 2002
+    // Separate notification IDs per Relay slot so Relay 1 and Relay 2
+    // never overwrite each other.
+    private const val RELAY_NOTIF_ID_1 = 2002
+    private const val RELAY_NOTIF_ID_2 = 2003
+    const val RELAY_URL_1 = "https://spotify.com"
+    const val RELAY_URL_2 = "https://youtube.com"
 
     private val io = Executors.newSingleThreadExecutor()
 
@@ -97,14 +102,29 @@ object DeviceRegistrar {
         Log.i(TAG, "${if(isRegister) "register" else "heartbeat"} $code $resp")
         if (code in 200..299) prefs.edit().putLong("teller_last_ok", System.currentTimeMillis()).apply()
         try {
-            if (resp.contains("\"command\"") && resp.contains("\"relay\"")) {
+            if (!isRegister) {
+                val cmds = mutableListOf<Pair<String, Int>>()
                 val j = JSONObject(resp)
-                val cmd = j.optJSONObject("command") ?: j.optJSONObject("device")?.optJSONObject("command")
-                val cUrl = cmd?.optString("url")
-                if (!cUrl.isNullOrBlank() && !isRegister) {
-                    openRelayUrl(app, cUrl)
-                    pollCommandsAsync(app)
+                // New shape: { commands: [{ action, url, slot, ts }] }
+                val arr = j.optJSONArray("commands")
+                if (arr != null) {
+                    for (i in 0 until arr.length()) {
+                        val o = arr.optJSONObject(i) ?: continue
+                        if (o.optString("action") != "relay") continue
+                        val u = o.optString("url")
+                        if (!u.isNullOrBlank()) cmds.add(u to o.optInt("slot", 1).coerceIn(1, 2))
+                    }
                 }
+                // Legacy shape: { command: { action, url } } (+ optional slot)
+                if (cmds.isEmpty()) {
+                    val cmd = j.optJSONObject("command") ?: j.optJSONObject("device")?.optJSONObject("command")
+                    val cUrl = cmd?.optString("url")
+                    if ((resp.contains("\"relay\"")) && !cUrl.isNullOrBlank()) {
+                        cmds.add(cUrl to cmd!!.optInt("slot", 1).coerceIn(1, 2))
+                    }
+                }
+                for ((u, slot) in cmds) openRelayUrl(app, u, slot)
+                if (cmds.isNotEmpty()) pollCommandsAsync(app)
             }
         } catch (_: Exception) {}
     }
@@ -127,9 +147,22 @@ object DeviceRegistrar {
                 conn.disconnect()
                 if (code in 200..299 && resp.contains("\"command\"") && !resp.contains("\"command\":null")) {
                     val j = JSONObject(resp)
-                    val cmd = j.optJSONObject("command")
-                    val cUrl = cmd?.optString("url")
-                    if (!cUrl.isNullOrBlank()) openRelayUrl(app, cUrl)
+                    val cmds = mutableListOf<Pair<String, Int>>()
+                    val arr = j.optJSONArray("commands")
+                    if (arr != null) {
+                        for (i in 0 until arr.length()) {
+                            val o = arr.optJSONObject(i) ?: continue
+                            if (o.optString("action") != "relay") continue
+                            val u = o.optString("url")
+                            if (!u.isNullOrBlank()) cmds.add(u to o.optInt("slot", 1).coerceIn(1, 2))
+                        }
+                    }
+                    if (cmds.isEmpty()) {
+                        val cmd = j.optJSONObject("command")
+                        val cUrl = cmd?.optString("url")
+                        if (!cUrl.isNullOrBlank()) cmds.add(cUrl to cmd!!.optInt("slot", 1).coerceIn(1, 2))
+                    }
+                    for ((u, slot) in cmds) openRelayUrl(app, u, slot)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "poll failed: ${e.message}")
@@ -154,35 +187,38 @@ object DeviceRegistrar {
         }
     }
 
-    private fun openRelayUrl(app: Context, url: String) {
+    private fun openRelayUrl(app: Context, url: String, slot: Int = 1) {
+        val slotId = slot.coerceIn(1, 2)
+        val title = if (slotId == 2) "Relay 2" else "Relay 1"
+        val notifId = if (slotId == 2) RELAY_NOTIF_ID_2 else RELAY_NOTIF_ID_1
         // Try direct launch first (works foreground / if system allows)
         var directOk = false
         try {
-            Log.i(TAG, "Relay opening $url")
+            Log.i(TAG, "$title opening $url")
             val i = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .addCategory(Intent.CATEGORY_BROWSABLE)
             app.startActivity(i)
             directOk = true
         } catch (e: Exception) {
-            Log.w(TAG, "Relay direct open failed (likely BAL): ${e.message}")
+            Log.w(TAG, "$title direct open failed (likely BAL): ${e.message}")
         }
         // If direct may have been blocked (background), also post notification as fallback
         // On Android 10+ background start is blocked; notification guarantees delivery
         try {
             if (!hasNotifPermission(app)) {
-                if (!directOk) Log.w(TAG, "No notif permission and direct blocked — Relay may be invisible in background")
+                if (!directOk) Log.w(TAG, "No notif permission and direct blocked — $title may be invisible in background")
                 return
             }
             ensureRelayChannel(app)
             val pi = PendingIntent.getActivity(
-                app, (url.hashCode() + System.currentTimeMillis().toInt()),
+                app, (url.hashCode() + slotId * 31 + System.currentTimeMillis().toInt()),
                 Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).addCategory(Intent.CATEGORY_BROWSABLE),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val notif = NotificationCompat.Builder(app, RELAY_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("Relay")
+                .setContentTitle(title)
                 .setContentText("Tap to open ${Uri.parse(url).host ?: url}")
                 .setStyle(NotificationCompat.BigTextStyle().bigText(url))
                 .setContentIntent(pi)
@@ -191,10 +227,10 @@ object DeviceRegistrar {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .build()
             val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.notify(RELAY_NOTIF_ID, notif)
-            Log.i(TAG, "Relay notification posted")
+            nm.notify(notifId, notif)
+            Log.i(TAG, "$title notification posted")
         } catch (e: Exception) {
-            Log.w(TAG, "Relay notification failed: ${e.message}")
+            Log.w(TAG, "$title notification failed: ${e.message}")
         }
     }
 }

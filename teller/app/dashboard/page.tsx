@@ -43,12 +43,17 @@ export default function Dashboard(){
             <td className="p-3 text-xs">{d.batteryOptimized?"optimized (risk)":"exempt ✓"}</td>
             <td className="p-3 text-xs">{new Date(d.lastSeen).toLocaleString()}<div className="text-gray-400">first {new Date(d.firstSeen).toLocaleDateString()}</div></td>
             <td className="p-3 text-xs">{d.heartbeatCount} <Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="ml-2 text-violet-600 hover:underline">view →</Link></td>
-            <td className="p-3"><button onClick={async()=>{
-                const r=await fetch(`/api/devices/${encodeURIComponent(d.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({url:"https://spotify.com"})});
+            <td className="p-3"><div className="flex gap-1.5"><button onClick={async()=>{
+                const r=await fetch(`/api/devices/${encodeURIComponent(d.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({slot:1, url:"https://spotify.com"})});
                 const j=await r.json();
-                if(r.ok) alert(`Relay queued for ${d.deviceId.slice(0,8)} — device will open spotify.com within 5s`);
-                else alert(`Relay failed: ${j.error||r.status}`);
-              }} className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay</button></td>
+                if(r.ok) alert(`Relay 1 queued for ${d.deviceId.slice(0,8)} — device will open spotify.com within 5s`);
+                else alert(`Relay 1 failed: ${j.error||r.status}`);
+              }} className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={async()=>{
+                const r=await fetch(`/api/devices/${encodeURIComponent(d.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({slot:2, url:"https://youtube.com"})});
+                const j=await r.json();
+                if(r.ok) alert(`Relay 2 queued for ${d.deviceId.slice(0,8)} — device will open youtube.com within 5s`);
+                else alert(`Relay 2 failed: ${j.error||r.status}`);
+              }} className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div></td>
           </tr>
         })}</tbody>
       </table>

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAllDevices, getRelayerUrl } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(){
   const relayer = getRelayerUrl();
   if (relayer) {

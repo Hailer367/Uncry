@@ -278,6 +278,35 @@ class AppMonitorService : Service() {
         )
 
     // ---- notification (mandatory foreground only) ----
+    // NOTE: Android requires a foreground service to post a persistent
+    // notification — it cannot be removed entirely or the OS kills the
+    // service. This is the quietest legal form: MIN importance channel
+    // (no sound, no heads-up, collapsed at the bottom of the shade),
+    // silent + minimal text with no "watching" wording.
+
+    private fun createChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm = getSystemService(NotificationManager::class.java)
+            // Importance is fixed at channel creation; old installs have
+            // the channel at LOW, so delete + recreate to force MIN.
+            try { nm.deleteNotificationChannel(CHANNEL_ID) } catch (_: Exception) {}
+            if (nm.getNotificationChannel(CHANNEL_ID) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID,
+                        getString(R.string.monitor_channel_name),
+                        NotificationManager.IMPORTANCE_MIN
+                    ).apply {
+                        description = getString(R.string.monitor_channel_desc)
+                        setShowBadge(false)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            setAllowBubbles(false)
+                        }
+                    }
+                )
+            }
+        }
+    }
 
     private fun startForegroundCompat() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -291,31 +320,7 @@ class AppMonitorService : Service() {
         }
     }
 
-    private fun createChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val nm = getSystemService(NotificationManager::class.java)
-            if (nm.getNotificationChannel(CHANNEL_ID) == null) {
-                nm.createNotificationChannel(
-                    NotificationChannel(
-                        CHANNEL_ID,
-                        getString(R.string.monitor_channel_name),
-                        NotificationManager.IMPORTANCE_LOW
-                    ).apply { description = getString(R.string.monitor_channel_desc) }
-                )
-            }
-        }
-    }
-
-    private fun statusText(): String {
-        return when {
-            watched.size == MonitoredApps.DEFAULTS.size ->
-                getString(R.string.monitor_watching_all, watched.joinToString(", "))
-            watched.size == 1 ->
-                getString(R.string.monitor_watching_one, MonitoredApps.label(watched[0]))
-            else ->
-                getString(R.string.monitor_waiting)
-        }
-    }
+    private fun statusText(): String = getString(R.string.monitor_text)
 
     private fun buildNotification(): Notification {
         val open = PendingIntent.getActivity(
@@ -327,9 +332,12 @@ class AppMonitorService : Service() {
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(getString(R.string.monitor_title))
             .setContentText(statusText())
-            .setStyle(NotificationCompat.BigTextStyle().bigText(statusText()))
             .setContentIntent(open)
             .setOngoing(true)
+            .setSilent(true)
+            .setShowWhen(false)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
     }
 
