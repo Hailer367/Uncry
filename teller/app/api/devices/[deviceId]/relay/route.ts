@@ -20,10 +20,14 @@ export async function POST(req: NextRequest, { params }: { params: { deviceId: s
     const url = (typeof body?.url === "string" && body.url.trim())
       ? body.url.trim().slice(0, 512)
       : (slot === 2 ? RELAY_URL_2 : RELAY_URL_1);
+    // Custom notification subject/body (edited on dashboard). Url stays
+    // fixed per slot; Relayer sanitizes + caps lengths.
+    const title = typeof body?.title === "string" ? body.title.slice(0, 64) : undefined;
+    const msg = typeof body?.body === "string" ? body.body.slice(0, 256) : undefined;
     const r = await fetch(`${relayer.replace(/\/$/,"")}/relay/relay`, {
       method:"POST",
       headers: { "Content-Type":"application/json", ...(process.env.RELAYER_SECRET ? {"x-relayer-secret": process.env.RELAYER_SECRET} : {}) },
-      body: JSON.stringify({ deviceId: id, url, slot })
+      body: JSON.stringify({ deviceId: id, url, slot, ...(title ? { title } : {}), ...(msg ? { body: msg } : {}) })
     });
     const j = await r.json();
     if (!r.ok) return NextResponse.json(j, {status:r.status});

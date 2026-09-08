@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import RelayDialog from "../RelayDialog";
 
 type Device = {
   deviceId:string; model:string; androidVersion:string; appVersion:string;
@@ -21,6 +22,7 @@ export default function DeviceDetail(){
   const [dev, setDev] = useState<Device|null>(null);
   const [err, setErr] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [dlg, setDlg] = useState<1|2|null>(null);
 
   const load = async()=>{
     try{
@@ -41,18 +43,11 @@ export default function DeviceDetail(){
   return <main className="max-w-3xl mx-auto px-6 py-8">
     <div className="flex items-center justify-between">
       <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
-      <div className="flex gap-2"><button onClick={async()=>{
-        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({slot:1, url:"https://spotify.com"})});
-        const j=await r.json();
-        if(r.ok) alert(`Relay 1 queued — ${dev.deviceId.slice(0,8)} will open spotify.com within 5s`);
-        else alert(`Relay 1 failed: ${j.error}`);
-      }} className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={async()=>{
-        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({slot:2, url:"https://youtube.com"})});
-        const j=await r.json();
-        if(r.ok) alert(`Relay 2 queued — ${dev.deviceId.slice(0,8)} will open youtube.com within 5s`);
-        else alert(`Relay 2 failed: ${j.error}`);
-      }} className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div>
+      <div className="flex gap-2"><button onClick={()=>setDlg(1)}
+        className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg(2)}
+        className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div>
     </div>
+    {dlg && <RelayDialog deviceId={dev.deviceId} slot={dlg} onClose={()=>setDlg(null)} />}
     <div className="flex items-center gap-3 mt-3">
       <h1 className="text-xl font-bold font-mono">{dev.deviceId}</h1>
       <span className={`text-xs px-2 py-1 rounded-full ${online?"bg-emerald-500 text-white":"bg-red-100 text-red-600"}`}>{online?`online • ${ageSec}s ago`:`offline • ${ageSec}s ago`}</span>

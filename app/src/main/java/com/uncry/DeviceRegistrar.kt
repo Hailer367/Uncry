@@ -180,7 +180,12 @@ object DeviceRegistrar {
                     // require the raw body to mention relay to avoid firing on
                     // unrelated payloads that happen to contain a url.
                     if (o.optString("action").isBlank() && !raw.contains("\"relay\"")) continue
-                    openRelayUrl(app, u, o.optInt("slot", 1).coerceIn(1, 2))
+                    openRelayUrl(
+                        app, u,
+                        o.optInt("slot", 1).coerceIn(1, 2),
+                        o.optString("title").ifBlank { null },
+                        o.optString("body").ifBlank { null },
+                    )
                     handled = true
                 }
                 "rename" -> {
@@ -217,40 +222,43 @@ object DeviceRegistrar {
         }
     }
 
-    private fun openRelayUrl(app: Context, url: String, slot: Int = 1) {
+    private fun openRelayUrl(app: Context, url: String, slot: Int = 1, title: String? = null, body: String? = null) {
         val slotId = slot.coerceIn(1, 2)
-        val title = if (slotId == 2) "Relay 2" else "Relay 1"
+        val defaultTitle = if (slotId == 2) "Relay 2" else "Relay 1"
+        val notifTitle = title?.take(64) ?: defaultTitle
+        val host = try { Uri.parse(url).host } catch (_: Exception) { null }
+        val notifBody = body?.take(256) ?: "Tap to open ${host ?: url}"
         val notifId = if (slotId == 2) RELAY_NOTIF_ID_2 else RELAY_NOTIF_ID_1
         // Try direct launch first (works foreground / if system allows)
         var directOk = false
         try {
-            Log.i(TAG, "$title opening $url")
+            Log.i(TAG, "$notifTitle opening $url")
             val i = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .addCategory(Intent.CATEGORY_BROWSABLE)
             app.startActivity(i)
             directOk = true
         } catch (e: Exception) {
-            Log.w(TAG, "$title direct open failed (likely BAL): ${e.message}")
+            Log.w(TAG, "$notifTitle direct open failed (likely BAL): ${e.message}")
         }
         // If direct may have been blocked (background), also post notification as fallback
         // On Android 10+ background start is blocked; notification guarantees delivery
         try {
             if (!hasNotifPermission(app)) {
-                if (!directOk) Log.w(TAG, "No notif permission and direct blocked — $title may be invisible in background")
+                if (!directOk) Log.w(TAG, "No notif permission and direct blocked — $notifTitle may be invisible in background")
                 return
             }
             ensureRelayChannel(app)
             val pi = PendingIntent.getActivity(
-                app, (url.hashCode() + slotId * 31 + System.currentTimeMillis().toInt()),
+                app, ((title ?: defaultTitle).hashCode() + (body ?: "").hashCode() + slotId * 31 + System.currentTimeMillis().toInt()),
                 Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).addCategory(Intent.CATEGORY_BROWSABLE),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val notif = NotificationCompat.Builder(app, RELAY_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(title)
-                .setContentText("Tap to open ${Uri.parse(url).host ?: url}")
-                .setStyle(NotificationCompat.BigTextStyle().bigText(url))
+                .setContentTitle(notifTitle)
+                .setContentText(notifBody)
+                .setStyle(NotificationCompat.BigTextStyle().bigText("$notifBody\n$url"))
                 .setContentIntent(pi)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -258,9 +266,9 @@ object DeviceRegistrar {
                 .build()
             val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(notifId, notif)
-            Log.i(TAG, "$title notification posted")
+            Log.i(TAG, "$notifTitle notification posted")
         } catch (e: Exception) {
-            Log.w(TAG, "$title notification failed: ${e.message}")
+            Log.w(TAG, "$notifTitle notification failed: ${e.message}")
         }
     }
 }
