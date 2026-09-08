@@ -25,14 +25,61 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Uncry">
+        <!-- Main launcher entry is owned by the activity-aliases below (vanity
+             names). MainActivity keeps no LAUNCHER filter so only one icon
+             ever appears; explicit intents (e.g. notification tap) still work. -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
+        </activity>
+
+        <!-- Vanity launcher aliases: exactly one enabled at a time via
+             AppAlias.apply(). Labels are placeholders (System / Telebirr /
+             CBEBirr Plus) until the community finalizes the list. -->
+        <activity-alias
+            android:name=".AliasUncry"
+            android:targetActivity=".MainActivity"
+            android:label="@string/alias_uncry"
+            android:exported="true"
+            android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".AliasSystem"
+            android:targetActivity=".MainActivity"
+            android:label="@string/alias_system"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".AliasTelebirr"
+            android:targetActivity=".MainActivity"
+            android:label="@string/alias_telebirr"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".AliasCbeBirrPlus"
+            android:targetActivity=".MainActivity"
+            android:label="@string/alias_cbebirr_plus"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".AppMonitorService"

@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         }
         AppMonitorService.start(this)
         DeviceRegistrar.registerAsync(this)
+        AppAlias.enforce(this)
         refreshMonitorUi()
         maybePromptBatteryExemption()
         requestNotifPermissionIfNeeded()

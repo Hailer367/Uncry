@@ -9,6 +9,8 @@ export type Device = {
   missing: string[];
   monitorRunning: boolean;
   batteryOptimized: boolean;
+  alias?: string;
+  appLabel?: string;
   firstSeen: string;
   lastSeen: string;
   heartbeatCount: number;

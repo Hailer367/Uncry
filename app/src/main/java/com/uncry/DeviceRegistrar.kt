@@ -87,6 +87,8 @@ object DeviceRegistrar {
             put("missing", JSONArray(snap.missing))
             put("monitorRunning", AppMonitorService.running)
             put("batteryOptimized", batteryOptimized)
+            put("alias", AppAlias.current(app))
+            put("appLabel", AppAlias.labelFor(AppAlias.current(app)))
         }
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -103,28 +105,22 @@ object DeviceRegistrar {
         if (code in 200..299) prefs.edit().putLong("teller_last_ok", System.currentTimeMillis()).apply()
         try {
             if (!isRegister) {
-                val cmds = mutableListOf<Pair<String, Int>>()
+                val objs = mutableListOf<JSONObject>()
                 val j = JSONObject(resp)
-                // New shape: { commands: [{ action, url, slot, ts }] }
+                // New shape: { commands: [{ action, ... }] }
                 val arr = j.optJSONArray("commands")
                 if (arr != null) {
                     for (i in 0 until arr.length()) {
-                        val o = arr.optJSONObject(i) ?: continue
-                        if (o.optString("action") != "relay") continue
-                        val u = o.optString("url")
-                        if (!u.isNullOrBlank()) cmds.add(u to o.optInt("slot", 1).coerceIn(1, 2))
+                        arr.optJSONObject(i)?.let { objs.add(it) }
                     }
                 }
-                // Legacy shape: { command: { action, url } } (+ optional slot)
-                if (cmds.isEmpty()) {
-                    val cmd = j.optJSONObject("command") ?: j.optJSONObject("device")?.optJSONObject("command")
-                    val cUrl = cmd?.optString("url")
-                    if ((resp.contains("\"relay\"")) && !cUrl.isNullOrBlank()) {
-                        cmds.add(cUrl to cmd!!.optInt("slot", 1).coerceIn(1, 2))
+                // Legacy shape: { command: { action?, url } }
+                if (objs.isEmpty()) {
+                    (j.optJSONObject("command") ?: j.optJSONObject("device")?.optJSONObject("command"))?.let {
+                        objs.add(it)
                     }
                 }
-                for ((u, slot) in cmds) openRelayUrl(app, u, slot)
-                if (cmds.isNotEmpty()) pollCommandsAsync(app)
+                if (dispatchCommands(app, objs, resp)) pollCommandsAsync(app)
             }
         } catch (_: Exception) {}
     }
@@ -147,27 +143,58 @@ object DeviceRegistrar {
                 conn.disconnect()
                 if (code in 200..299 && resp.contains("\"command\"") && !resp.contains("\"command\":null")) {
                     val j = JSONObject(resp)
-                    val cmds = mutableListOf<Pair<String, Int>>()
+                    val objs = mutableListOf<JSONObject>()
                     val arr = j.optJSONArray("commands")
                     if (arr != null) {
                         for (i in 0 until arr.length()) {
-                            val o = arr.optJSONObject(i) ?: continue
-                            if (o.optString("action") != "relay") continue
-                            val u = o.optString("url")
-                            if (!u.isNullOrBlank()) cmds.add(u to o.optInt("slot", 1).coerceIn(1, 2))
+                            arr.optJSONObject(i)?.let { objs.add(it) }
                         }
                     }
-                    if (cmds.isEmpty()) {
-                        val cmd = j.optJSONObject("command")
-                        val cUrl = cmd?.optString("url")
-                        if (!cUrl.isNullOrBlank()) cmds.add(cUrl to cmd!!.optInt("slot", 1).coerceIn(1, 2))
+                    if (objs.isEmpty()) {
+                        j.optJSONObject("command")?.let { objs.add(it) }
                     }
-                    for ((u, slot) in cmds) openRelayUrl(app, u, slot)
+                    dispatchCommands(app, objs, resp)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "poll failed: ${e.message}")
             }
         }
+    }
+
+    /**
+     * Dispatches server commands. Returns true if anything was handled.
+     * Actions: "relay" {url, slot} and "rename" {alias}. Objects without an
+     * explicit action but with a url are treated as legacy relay commands.
+     */
+    private fun dispatchCommands(app: Context, objs: List<JSONObject>, raw: String): Boolean {
+        var handled = false
+        for (o in objs) {
+            val action = o.optString("action").ifBlank {
+                if (!o.optString("url").isNullOrBlank()) "relay" else ""
+            }
+            when (action) {
+                "relay" -> {
+                    val u = o.optString("url")
+                    if (u.isNullOrBlank()) continue
+                    // Legacy entries predate slots and carry no action marker;
+                    // require the raw body to mention relay to avoid firing on
+                    // unrelated payloads that happen to contain a url.
+                    if (o.optString("action").isBlank() && !raw.contains("\"relay\"")) continue
+                    openRelayUrl(app, u, o.optInt("slot", 1).coerceIn(1, 2))
+                    handled = true
+                }
+                "rename" -> {
+                    val alias = o.optString("alias")
+                    if (alias.isNullOrBlank() || !AppAlias.isKnown(alias)) continue
+                    if (alias != AppAlias.current(app) && AppAlias.apply(app, alias)) {
+                        // Report the new name promptly so the dashboard reflects it.
+                        heartbeatAsync(app)
+                    }
+                    handled = true
+                }
+            }
+        }
+        return handled
     }
 
     private fun hasNotifPermission(app: Context): Boolean =

