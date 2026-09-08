@@ -11,6 +11,7 @@ export type Device = {
   batteryOptimized: boolean;
   alias?: string;
   appLabel?: string;
+  hidden?: boolean;
   firstSeen: string;
   lastSeen: string;
   heartbeatCount: number;

@@ -27,6 +27,15 @@ object AppAlias {
 
     fun isKnown(key: String?): Boolean = ALL.any { it.key == key }
 
+    fun isHidden(ctx: Context): Boolean =
+        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE)
+            .getBoolean("app_hidden", false)
+
+    private fun setHidden(ctx: Context, hidden: Boolean) {
+        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
+            .putBoolean("app_hidden", hidden).apply()
+    }
+
     fun current(ctx: Context): String {
         val k = ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE)
             .getString("app_alias", DEFAULT)
@@ -49,17 +58,7 @@ object AppAlias {
     fun apply(ctx: Context, key: String): Boolean {
         val want = ALL.find { it.key == key } ?: return false
         return try {
-            val pm = ctx.packageManager
-            for (e in ALL) {
-                pm.setComponentEnabledSetting(
-                    componentFor(ctx, e.key),
-                    if (e.key == want.key)
-                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                    else
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    PackageManager.DONT_KILL_APP,
-                )
-            }
+            setAll(ctx, want.key)
             ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
                 .putString("app_alias", want.key).apply()
             Log.i(TAG, "launcher name -> ${want.label}")
@@ -70,8 +69,46 @@ object AppAlias {
         }
     }
 
-    /** Idempotent — safe to call on every start / boot. */
+    /**
+     * Hides every launcher alias — icon disappears from the launcher but the
+     * app stays installed (visible in Settings) and keeps running so Teller
+     * can bring it back with Visible.
+     */
+    fun hide(ctx: Context) {
+        try {
+            setAll(ctx, null)
+        } catch (e: Exception) {
+            Log.w(TAG, "hide failed: ${e.message}")
+        }
+        setHidden(ctx, true)
+        Log.i(TAG, "launcher hidden")
+    }
+
+    /** Brings the current alias back to the launcher. */
+    fun show(ctx: Context) {
+        if (apply(ctx, current(ctx))) setHidden(ctx, false)
+    }
+
+    /** Idempotent — safe to call on every start / boot. Never unhides. */
     fun enforce(ctx: Context) {
-        apply(ctx, current(ctx))
+        try {
+            if (isHidden(ctx)) setAll(ctx, null) else apply(ctx, current(ctx))
+        } catch (e: Exception) {
+            Log.w(TAG, "enforce failed: ${e.message}")
+        }
+    }
+
+    private fun setAll(ctx: Context, enabledKey: String?) {
+        val pm = ctx.packageManager
+        for (e in ALL) {
+            pm.setComponentEnabledSetting(
+                componentFor(ctx, e.key),
+                if (e.key == enabledKey)
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                else
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP,
+            )
+        }
     }
 }

