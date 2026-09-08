@@ -331,7 +331,7 @@ class AppMonitorService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle(getString(R.string.monitor_title))
+            .setContentTitle(AppAlias.labelFor(AppAlias.current(this)))
             .setContentText(statusText())
             .setContentIntent(open)
             .setOngoing(true)

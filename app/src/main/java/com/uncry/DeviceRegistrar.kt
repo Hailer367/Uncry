@@ -187,6 +187,9 @@ object DeviceRegistrar {
                     val alias = o.optString("alias")
                     if (alias.isNullOrBlank() || !AppAlias.isKnown(alias)) continue
                     if (alias != AppAlias.current(app) && AppAlias.apply(app, alias)) {
+                        // Refresh the foreground notification so its title
+                        // follows the new vanity name immediately.
+                        try { AppMonitorService.refresh(app) } catch (_: Exception) {}
                         // Report the new name promptly so the dashboard reflects it.
                         heartbeatAsync(app)
                     }

@@ -68,7 +68,7 @@ class MonitorBootWorker(
             }
             val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("Uncry")
+                .setContentTitle(AppAlias.labelFor(AppAlias.current(ctx)))
                 .setContentText("Running")
                 .setOngoing(true)
                 .setSilent(true)
