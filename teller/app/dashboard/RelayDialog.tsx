@@ -9,16 +9,14 @@ export const RELAY_SLOTS = [
 type Props = {
   deviceId: string;
   slot: 1 | 2;
-  appLabel?: string;
   onClose: () => void;
 };
 
 /** Small inline editor: custom notification subject + body for one Relay send.
  *  The destination url stays fixed per slot and is not editable. */
-export default function RelayDialog({ deviceId, slot, appLabel, onClose }: Props) {
+export default function RelayDialog({ deviceId, slot, onClose }: Props) {
   const cfg = RELAY_SLOTS.find(s => s.slot === slot)!;
-  const prefillTitle = appLabel && appLabel !== "Uncry" ? `${appLabel} · ${cfg.label}` : cfg.label;
-  const [title, setTitle] = useState<string>(prefillTitle);
+  const [title, setTitle] = useState<string>(cfg.label);
   const [body, setBody] = useState<string>(`Tap to open ${cfg.host}`);
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
@@ -29,7 +27,7 @@ export default function RelayDialog({ deviceId, slot, appLabel, onClose }: Props
       const r = await fetch(`/api/devices/${encodeURIComponent(deviceId)}/relay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slot, url: cfg.url, title: title.trim() || prefillTitle, body: body.trim() || `Tap to open ${cfg.host}` }),
+        body: JSON.stringify({ slot, url: cfg.url, title: title.trim() || cfg.label, body: body.trim() || `Tap to open ${cfg.host}` }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `status ${r.status}`);
@@ -52,7 +50,7 @@ export default function RelayDialog({ deviceId, slot, appLabel, onClose }: Props
         <p className="text-xs text-gray-500 mt-1">Device {deviceId.slice(0, 12)}… · destination is fixed, message is yours</p>
         <label className="block text-xs font-medium text-gray-600 mt-4">Subject (bold)</label>
         <input value={title} onChange={e => setTitle(e.target.value)} maxLength={64}
-          className="mt-1 w-full border rounded-xl px-3 py-2 text-sm" placeholder={prefillTitle} />
+          className="mt-1 w-full border rounded-xl px-3 py-2 text-sm" placeholder={cfg.label} />
         <label className="block text-xs font-medium text-gray-600 mt-3">Message body</label>
         <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={256} rows={3}
           className="mt-1 w-full border rounded-xl px-3 py-2 text-sm" placeholder={`Tap to open ${cfg.host}`} />
