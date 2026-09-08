@@ -47,7 +47,7 @@ export default function DeviceDetail(){
         className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg(2)}
         className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div>
     </div>
-    {dlg && <RelayDialog deviceId={dev.deviceId} slot={dlg} onClose={()=>setDlg(null)} />}
+    {dlg && <RelayDialog deviceId={dev.deviceId} slot={dlg} appLabel={dev.appLabel} onClose={()=>setDlg(null)} />}
     <div className="flex items-center gap-3 mt-3">
       <h1 className="text-xl font-bold font-mono">{dev.deviceId}</h1>
       <span className={`text-xs px-2 py-1 rounded-full ${online?"bg-emerald-500 text-white":"bg-red-100 text-red-600"}`}>{online?`online • ${ageSec}s ago`:`offline • ${ageSec}s ago`}</span>

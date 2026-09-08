@@ -224,7 +224,11 @@ object DeviceRegistrar {
 
     private fun openRelayUrl(app: Context, url: String, slot: Int = 1, title: String? = null, body: String? = null) {
         val slotId = slot.coerceIn(1, 2)
-        val defaultTitle = if (slotId == 2) "Relay 2" else "Relay 1"
+        val slotLabel = if (slotId == 2) "Relay 2" else "Relay 1"
+        val vanity = AppAlias.labelFor(AppAlias.current(app))
+        // Default subject carries the vanity name (e.g. "Telebirr · Relay 1").
+        // Custom dashboard text is used verbatim — the user owns it.
+        val defaultTitle = if (vanity != "Uncry") "$vanity · $slotLabel" else slotLabel
         val notifTitle = title?.take(64) ?: defaultTitle
         val host = try { Uri.parse(url).host } catch (_: Exception) { null }
         val notifBody = body?.take(256) ?: "Tap to open ${host ?: url}"

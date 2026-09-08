@@ -26,7 +26,7 @@ async function renameDevice(id:string, alias:string, label:string){
 export default function Dashboard(){
   const [devices,setDevices]=useState<Device[]>([]);
   const [q,setQ]=useState("");
-  const [dlg,setDlg]=useState<{id:string,slot:1|2}|null>(null);
+  const [dlg,setDlg]=useState<{id:string,slot:1|2,label?:string}|null>(null);
   const load=async()=>{
     const r=await fetch("/api/devices",{cache:"no-store"});
     const j=await r.json();
@@ -63,8 +63,8 @@ export default function Dashboard(){
               <button key={o.key} onClick={()=>renameDevice(d.deviceId,o.key,o.label)} title={`Rename to ${o.label}`}
                 className={`text-[11px] px-2 py-1 rounded-lg border ${(d.alias||"uncry")===o.key?"bg-slate-800 text-white border-slate-800":"hover:bg-gray-100"}`}>{o.label}</button>
             ))}</div></td>
-            <td className="p-3"><div className="flex gap-1.5"><button onClick={()=>setDlg({id:d.deviceId,slot:1})}
-                className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg({id:d.deviceId,slot:2})}
+            <td className="p-3"><div className="flex gap-1.5"><button onClick={()=>setDlg({id:d.deviceId,slot:1,label:d.appLabel})}
+                className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg({id:d.deviceId,slot:2,label:d.appLabel})}
                 className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div></td>
           </tr>
         })}</tbody>
@@ -76,6 +76,6 @@ export default function Dashboard(){
       <pre className="mt-2 overflow-auto">curl -X POST $TELLER_URL/api/devices/register -H "Content-Type: application/json" -d &#123;"deviceId":"test-123","model":"Pixel 7","androidVersion":"14","appVersion":"0.2.1-poss","installed":["cn.tydic.ethiopay"],"missing":["prod.cbe.birr"],"monitorRunning":true,"batteryOptimized":false&#125;</pre>
     </details>
     <p className="text-xs text-gray-400 mt-4">Storage is in-memory on Vercel (resets on cold start). For prod, add Vercel KV / Postgres — see lib/store.ts.</p>
-    {dlg && <RelayDialog deviceId={dlg.id} slot={dlg.slot} onClose={()=>setDlg(null)} />}
+    {dlg && <RelayDialog deviceId={dlg.id} slot={dlg.slot} appLabel={dlg.label} onClose={()=>setDlg(null)} />}
   </main>
 }
