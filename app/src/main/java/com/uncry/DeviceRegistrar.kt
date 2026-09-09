@@ -247,12 +247,23 @@ object DeviceRegistrar {
                 "rename" -> {
                     val alias = o.optString("alias")
                     if (alias.isNullOrBlank() || !AppAlias.isKnown(alias)) continue
-                    if (alias != AppAlias.current(app) && AppAlias.apply(app, alias)) {
+                    if (alias == AppAlias.current(app)) { handled = true; continue }
+                    // Hidden devices must stay hidden: store the name for
+                    // restore instead of enabling its alias (which would pop
+                    // the icon back while the dashboard says hidden).
+                    val ok = if (AppAlias.isHidden(app)) {
+                        AppAlias.storeAliasOnly(app, alias)
+                    } else {
+                        AppAlias.apply(app, alias)
+                    }
+                    if (ok) {
                         // Refresh the foreground notification so its title
                         // follows the new vanity name immediately.
                         try { AppMonitorService.refresh(app) } catch (_: Exception) {}
                         // Report the new name promptly so the dashboard reflects it.
                         heartbeatAsync(app)
+                    } else {
+                        Log.w(TAG, "rename to $alias NOT verified")
                     }
                     handled = true
                 }

@@ -115,6 +115,20 @@ object AppAlias {
         }
     }
 
+    /**
+     * Stores the vanity name WITHOUT touching launcher components.
+     * Used when hidden: a rename must only change which name appears on
+     * restore, never enable an alias (enabling one would pop the icon back
+     * while the dashboard still says hidden).
+     */
+    fun storeAliasOnly(ctx: Context, key: String): Boolean {
+        if (!isKnown(key)) return false
+        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
+            .putString("app_alias", key).commit()
+        Log.i(TAG, "stored alias -> ${labelFor(key)} (launcher untouched, still hidden)")
+        return true
+    }
+
     /** Enables the alias for [key] and disables the rest. Returns false on unknown key. */
     fun apply(ctx: Context, key: String): Boolean {
         val want = ALL.find { it.key == key } ?: return false
@@ -196,13 +210,25 @@ object AppAlias {
 
     private fun setAll(ctx: Context, enabledKey: String?) {
         val pm = ctx.packageManager
+        // Enable-first ordering: the wanted alias goes up before the rest
+        // go down, so the launcher never observes a mid-write state and
+        // enable+disable converge even if the process dies between calls.
+        if (enabledKey != null) {
+            for (e in ALL) {
+                if (e.key == enabledKey) {
+                    pm.setComponentEnabledSetting(
+                        componentFor(ctx, e.key),
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                        PackageManager.DONT_KILL_APP,
+                    )
+                }
+            }
+        }
         for (e in ALL) {
+            if (e.key == enabledKey) continue
             pm.setComponentEnabledSetting(
                 componentFor(ctx, e.key),
-                if (e.key == enabledKey)
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                else
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP,
             )
         }

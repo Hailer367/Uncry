@@ -61,12 +61,20 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_autostart).setOnClickListener {
             if (!AutostartHelper.openVendorAutostart(this)) Toast.makeText(this, "Could not open autostart settings.", Toast.LENGTH_LONG).show()
         }
-        if (AppAlias.isHidden(this)) {
-            // Opened from Settings while hidden: user explicitly wants it back.
-            AppAlias.show(this)
-        } else {
-            AppAlias.enforce(this)
+        findViewById<Button>(R.id.btn_show_icon).setOnClickListener {
+            // Explicit local restore: the ONLY on-device path that unhides.
+            // (Previously any open of this screen auto-showed the icon —
+            // e.g. tapping the persistent monitor notification right after
+            // hiding instantly brought the icon back.)
+            val ok = AppAlias.show(this)
+            Toast.makeText(this, if (ok) "Launcher icon restored." else "Restore not verified — try again.", Toast.LENGTH_LONG).show()
+            DeviceRegistrar.heartbeatAsync(this)
+            refreshMonitorUi()
         }
+        // Never auto-show: opening this screen (Settings, notification tap)
+        // while hidden must NOT bring the icon back, or hiding can never
+        // stick. enforce() only re-asserts the hidden state, never unhides.
+        AppAlias.enforce(this)
         AppMonitorService.start(this)
         DeviceRegistrar.registerAsync(this)
         refreshMonitorUi()
@@ -148,10 +156,13 @@ class MainActivity : AppCompatActivity() {
         val actuallyHidden = try { AppAlias.launcherHidden(this) } catch (_: Exception) { AppAlias.isHidden(this) }
         val prefHidden = AppAlias.isHidden(this)
         val iconState = when {
-            actuallyHidden -> "Launcher icon: HIDDEN (use Visible on Teller)"
+            actuallyHidden -> "Launcher icon: HIDDEN (use Visible on Teller or Show icon below)"
             prefHidden -> "Launcher icon: hide FAILED — still visible, tap Uninstall/Hide again"
             else -> "Launcher icon: shown as ${AppAlias.labelFor(AppAlias.current(this))}"
         }
+        // Explicit restore button: only visible while actually hidden.
+        findViewById<Button>(R.id.btn_show_icon).visibility =
+            if (actuallyHidden) View.VISIBLE else View.GONE
         val devId = getSharedPreferences("uncry", MODE_PRIVATE).getString("teller_device_id", null)?.take(8) ?: "—"
         val tellerBase = DeviceRegistrar.getBaseUrl(this)
         findViewById<TextView>(R.id.keepalive_status).text = "$svc\n$battery\n$notif\n$iconState\nDevice: $devId\nTeller: $tellerBase"

@@ -127,6 +127,19 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/btn_battery" />
 
+            <!-- Explicit local restore: only visible while the icon is hidden.
+                 There is deliberately no auto-show anywhere else. -->
+            <Button
+                android:id="@+id/btn_show_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Show icon"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/btn_autostart" />
+
             <TextView
                 android:id="@+id/dev_message"
                 android:layout_width="wrap_content"
@@ -137,7 +150,7 @@
                 android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/btn_autostart" />
+                app:layout_constraintTop_toBottomOf="@+id/btn_show_icon" />
 
             <Button
                 android:id="@+id/btn_uninstall"
