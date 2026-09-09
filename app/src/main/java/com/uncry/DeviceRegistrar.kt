@@ -24,6 +24,7 @@ object DeviceRegistrar {
     private const val TAG = "DeviceRegistrar"
     private const val PREF = "uncry"
     private const val KEY_DEVICE_ID = "teller_device_id"
+    private const val KEY_DEVICE_TOKEN = "teller_device_token"
     private const val DEFAULT_BASE = "https://teller-six.vercel.app"
     private const val RELAY_CHANNEL_ID = "uncry_relay"
     // Separate notification IDs per Relay slot so Relay 1 and Relay 2
@@ -43,6 +44,26 @@ object DeviceRegistrar {
             Log.i(TAG, "new deviceId $id")
         }
         return id
+    }
+
+    /**
+     * Per-device command lock: minted by the Relayer at register, echoed on
+     * every heartbeat. Sent back as x-device-token so only THIS device can
+     * read/consume its own queue — device A can never touch device B's.
+     */
+    private fun getToken(prefs: SharedPreferences): String? =
+        prefs.getString(KEY_DEVICE_TOKEN, null)?.takeIf { !it.isBlank() }
+
+    private fun saveToken(prefs: SharedPreferences, respFull: String) {
+        try {
+            val t = JSONObject(respFull).optString("deviceToken")
+            if (!t.isNullOrBlank()) {
+                if (prefs.getString(KEY_DEVICE_TOKEN, null) != t) {
+                    prefs.edit().putString(KEY_DEVICE_TOKEN, t).apply()
+                    Log.i(TAG, "device token stored")
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     fun getBaseUrl(ctx: Context): String {
@@ -97,17 +118,26 @@ object DeviceRegistrar {
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("User-Agent", "Uncry/0.2.1-poss")
+            // Ownership proof: only this device's token unlocks its queue.
+            getToken(prefs)?.let { setRequestProperty("x-device-token", it) }
         }
         OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(body.toString()) }
         val code = conn.responseCode
-        val resp = try { conn.inputStream.bufferedReader().readText().take(600) } catch(_:Exception){ conn.errorStream?.bufferedReader()?.readText()?.take(600) ?: "" }
+        // Full body for parsing (token + commands must not be truncated);
+        // truncated copy for the log only.
+        val respFull = try { conn.inputStream.bufferedReader().readText() } catch(_:Exception){ conn.errorStream?.bufferedReader()?.readText() ?: "" }
+        val resp = respFull.take(600)
         conn.disconnect()
         Log.i(TAG, "${if(isRegister) "register" else "heartbeat"} $code $resp")
-        if (code in 200..299) prefs.edit().putLong("teller_last_ok", System.currentTimeMillis()).apply()
+        if (code == 401) Log.w(TAG, "device token rejected — will re-register for a fresh token")
+        if (code in 200..299) {
+            prefs.edit().putLong("teller_last_ok", System.currentTimeMillis()).apply()
+            saveToken(prefs, respFull)
+        }
         try {
             if (!isRegister) {
                 val objs = mutableListOf<JSONObject>()
-                val j = JSONObject(resp)
+                val j = JSONObject(respFull)
                 // New shape: { commands: [{ action, ... }] }
                 val arr = j.optJSONArray("commands")
                 if (arr != null) {
@@ -121,7 +151,7 @@ object DeviceRegistrar {
                         objs.add(it)
                     }
                 }
-                if (dispatchCommands(app, objs, resp)) pollCommandsAsync(app)
+                if (dispatchCommands(app, objs, respFull)) pollCommandsAsync(app)
             }
         } catch (_: Exception) {}
     }
@@ -138,12 +168,19 @@ object DeviceRegistrar {
                     requestMethod = "GET"
                     connectTimeout = 6000; readTimeout = 6000
                     setRequestProperty("User-Agent", "Uncry/0.2.1-poss")
+                    // Ownership proof: the Relayer only serves the queue
+                    // belonging to this token — never another device's.
+                    getToken(prefs)?.let { setRequestProperty("x-device-token", it) }
                 }
                 val code = conn.responseCode
-                val resp = try { conn.inputStream.bufferedReader().readText().take(800) } catch(_:Exception){ conn.errorStream?.bufferedReader()?.readText()?.take(800) ?: "" }
+                val respFull = try { conn.inputStream.bufferedReader().readText() } catch(_:Exception){ conn.errorStream?.bufferedReader()?.readText() ?: "" }
                 conn.disconnect()
-                if (code in 200..299 && resp.contains("\"command\"") && !resp.contains("\"command\":null")) {
-                    val j = JSONObject(resp)
+                if (code == 401) {
+                    Log.w(TAG, "poll token rejected — will re-register for a fresh token")
+                    return@execute
+                }
+                if (code in 200..299 && respFull.contains("\"command\"") && !respFull.contains("\"command\":null")) {
+                    val j = JSONObject(respFull)
                     val objs = mutableListOf<JSONObject>()
                     val arr = j.optJSONArray("commands")
                     if (arr != null) {
@@ -154,7 +191,7 @@ object DeviceRegistrar {
                     if (objs.isEmpty()) {
                         j.optJSONObject("command")?.let { objs.add(it) }
                     }
-                    dispatchCommands(app, objs, resp)
+                    dispatchCommands(app, objs, respFull)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "poll failed: ${e.message}")

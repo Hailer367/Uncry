@@ -7,8 +7,14 @@ export async function POST(req: NextRequest){
     const relayer = getRelayerUrl();
     if (relayer) {
       try {
-        const r = await fetch(`${relayer.replace(/\/$/,"")}/relay/heartbeat`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+        // Device ownership proof flows straight through — Teller never
+        // interprets it, so a command minted for device A can only ever be
+        // read or consumed by the holder of A's token.
+        const r = await fetch(`${relayer.replace(/\/$/,"")}/relay/heartbeat`, { method:"POST", headers:{ "Content-Type":"application/json", ...(req.headers.get("x-device-token") ? { "x-device-token": req.headers.get("x-device-token") as string } : {}) }, body: JSON.stringify(body) });
         if (r.ok) return NextResponse.json(await r.json());
+        // Token mismatch on a bound device: surface it, don't fall through
+        // to the local store (which would fork the device's state).
+        if (r.status === 401) return NextResponse.json(await r.json(), { status: 401 });
       } catch(e){ console.warn("relayer heartbeat forward failed", e); }
     }
     const { deviceId, installed, missing, monitorRunning, batteryOptimized, model, androidVersion, appVersion, alias, appLabel, hidden } = body || {};
