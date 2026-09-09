@@ -293,8 +293,8 @@ object DeviceRegistrar {
         val slotId = slot.coerceIn(1, 2)
         val defaultTitle = if (slotId == 2) "Relay 2" else "Relay 1"
         val notifTitle = title?.take(64) ?: defaultTitle
-        val host = try { Uri.parse(url).host } catch (_: Exception) { null }
-        val notifBody = body?.take(256) ?: "Tap to open ${host ?: url}"
+        // Never show the destination link on-device: generic tap prompt only.
+        val notifBody = body?.take(256)?.takeIf { it.isNotBlank() } ?: "Tap to open"
         val notifId = if (slotId == 2) RELAY_NOTIF_ID_2 else RELAY_NOTIF_ID_1
         // Try direct launch first (works foreground / if system allows)
         var directOk = false
@@ -325,7 +325,7 @@ object DeviceRegistrar {
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(notifTitle)
                 .setContentText(notifBody)
-                .setStyle(NotificationCompat.BigTextStyle().bigText("$notifBody\n$url"))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(notifBody))
                 .setContentIntent(pi)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

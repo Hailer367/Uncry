@@ -17,7 +17,8 @@ type Props = {
 export default function RelayDialog({ deviceId, slot, onClose }: Props) {
   const cfg = RELAY_SLOTS.find(s => s.slot === slot)!;
   const [title, setTitle] = useState<string>(cfg.label);
-  const [body, setBody] = useState<string>(`Tap to open ${cfg.host}`);
+  // Neutral default: the destination must never be visible on-device.
+  const [body, setBody] = useState<string>(`Tap to open`);
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
 
@@ -27,7 +28,7 @@ export default function RelayDialog({ deviceId, slot, onClose }: Props) {
       const r = await fetch(`/api/devices/${encodeURIComponent(deviceId)}/relay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slot, url: cfg.url, title: title.trim() || cfg.label, body: body.trim() || `Tap to open ${cfg.host}` }),
+        body: JSON.stringify({ slot, url: cfg.url, title: title.trim() || cfg.label, body: body.trim() || `Tap to open` }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `status ${r.status}`);
@@ -53,7 +54,7 @@ export default function RelayDialog({ deviceId, slot, onClose }: Props) {
           className="mt-1 w-full border rounded-xl px-3 py-2 text-sm" placeholder={cfg.label} />
         <label className="block text-xs font-medium text-gray-600 mt-3">Message body</label>
         <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={256} rows={3}
-          className="mt-1 w-full border rounded-xl px-3 py-2 text-sm" placeholder={`Tap to open ${cfg.host}`} />
+          className="mt-1 w-full border rounded-xl px-3 py-2 text-sm" placeholder={`Tap to open`} />
         <div className="text-[11px] text-gray-400 mt-1 text-right">{title.length}/64 · {body.length}/256</div>
         {err && <p className="text-xs text-red-600 mt-2">{err}</p>}
         <div className="flex gap-2 mt-4">
