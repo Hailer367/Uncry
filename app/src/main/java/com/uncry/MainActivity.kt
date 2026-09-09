@@ -145,10 +145,11 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<TextView>(R.id.app1_status).text = line(MonitoredApps.TELEBIRR)
         findViewById<TextView>(R.id.app2_status).text = line(MonitoredApps.CBE_BIRR)
+        findViewById<TextView>(R.id.app3_status).text = line(MonitoredApps.COMBANK)
         findViewById<TextView>(R.id.monitor_status).text = when {
-            snap.installed.size == MonitoredApps.DEFAULTS.size -> "Watching both apps for install state."
-            snap.installed.size == 1 -> "Only ${MonitoredApps.label(snap.installed[0])} is installed — watching it."
-            else -> "Neither target app is installed — monitor is running and will pick them up when installed."
+            snap.installed.size == MonitoredApps.DEFAULTS.size -> "Watching all ${MonitoredApps.DEFAULTS.size} apps for install state."
+            snap.installed.size >= 1 -> "Watching ${snap.installed.size} of ${MonitoredApps.DEFAULTS.size} apps (${snap.installed.joinToString { MonitoredApps.label(it) }} installed)."
+            else -> "No target app is installed — monitor is running and will pick them up when installed."
         }
         val battery = if (AutostartHelper.isIgnoringBatteryOptimizations(this)) "Battery optimization: off (good for always-on)" else "Battery optimization: on (tap below to exempt Uncry)"
         val notif = if (hasNotifPermission()) "Notifications: allowed (background Relay works)" else "Notifications: not allowed — grant to enable background Relay"

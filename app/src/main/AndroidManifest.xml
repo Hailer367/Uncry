@@ -18,6 +18,7 @@
     <queries>
         <package android:name="cn.tydic.ethiopay" />
         <package android:name="prod.cbe.birr" />
+        <package android:name="com.combanketh.mobilebanking" />
     </queries>
 
     <application

@@ -7,13 +7,16 @@ import android.os.Build
 object MonitoredApps {
     const val TELEBIRR = "cn.tydic.ethiopay"
     const val CBE_BIRR = "prod.cbe.birr"
+    // Placeholder until the client supplies the real list.
+    const val COMBANK = "com.combanketh.mobilebanking"
 
-    val DEFAULTS: List<String> = listOf(TELEBIRR, CBE_BIRR)
+    val DEFAULTS: List<String> = listOf(TELEBIRR, CBE_BIRR, COMBANK)
 
     /** Friendly label for UI. */
     fun label(pkg: String): String = when (pkg) {
         TELEBIRR -> "TeleBirr ($pkg)"
         CBE_BIRR -> "CBE Birr ($pkg)"
+        COMBANK -> "ComBank ($pkg)"
         else -> pkg
     }
 
