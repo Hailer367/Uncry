@@ -72,7 +72,9 @@ export default function DeviceDetail(){
       <div className="text-xs text-gray-500">Launcher icon</div>
       <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.hidden?"hidden (in launcher, still installed + running)":"visible"}</span></div>
       <button onClick={async()=>{
-        const visible=!dev.hidden;
+        // visible=true brings the icon back, visible=false hides it.
+        // Currently hidden -> send true (Visible); currently visible -> send false (Hide).
+        const visible = dev.hidden === true;
         const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/visibility`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({visible})});
         const j=await r.json();
         if(r.ok) alert(visible?`Visible queued — ${dev.deviceId.slice(0,8)} icon returns within 5s`:`Hide queued — ${dev.deviceId.slice(0,8)} icon disappears within 5s (app stays installed + running)`);

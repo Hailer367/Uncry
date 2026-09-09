@@ -195,11 +195,15 @@ object DeviceRegistrar {
                     val wantVisible = o.optBoolean("visible")
                     val hidden = AppAlias.isHidden(app)
                     if (wantVisible && hidden) {
-                        AppAlias.show(app)
+                        val ok = AppAlias.show(app)
+                        Log.i(TAG, "visibility Visible executed, verified=$ok")
                         heartbeatAsync(app)
                     } else if (!wantVisible && !hidden) {
-                        AppAlias.hide(app)
+                        val ok = AppAlias.hide(app)
+                        Log.i(TAG, "visibility Hide executed, verified=$ok")
                         heartbeatAsync(app)
+                    } else {
+                        Log.i(TAG, "visibility no-op (wantVisible=$wantVisible hidden=$hidden)")
                     }
                     handled = true
                 }
