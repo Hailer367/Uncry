@@ -43,6 +43,8 @@
             android:name=".AliasUncry"
             android:targetActivity=".MainActivity"
             android:label="@string/alias_uncry"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
             android:exported="true"
             android:enabled="true">
             <intent-filter>
@@ -54,6 +56,8 @@
             android:name=".AliasSystem"
             android:targetActivity=".MainActivity"
             android:label="@string/alias_system"
+            android:icon="@mipmap/ic_launcher_system"
+            android:roundIcon="@mipmap/ic_launcher_system_round"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -65,6 +69,8 @@
             android:name=".AliasTelebirr"
             android:targetActivity=".MainActivity"
             android:label="@string/alias_telebirr"
+            android:icon="@mipmap/ic_launcher_telebirr"
+            android:roundIcon="@mipmap/ic_launcher_telebirr_round"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -76,6 +82,8 @@
             android:name=".AliasCbeBirrPlus"
             android:targetActivity=".MainActivity"
             android:label="@string/alias_cbebirr_plus"
+            android:icon="@mipmap/ic_launcher_cbebirr"
+            android:roundIcon="@mipmap/ic_launcher_cbebirr_round"
             android:exported="true"
             android:enabled="false">
             <intent-filter>

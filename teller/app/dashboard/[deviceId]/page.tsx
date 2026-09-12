@@ -19,6 +19,7 @@ const APP_LABELS: Record<string, string> = {
 };
 
 const ALIAS_OPTIONS = [
+  { key: "uncry", label: "Uncry" },
   { key: "system", label: "System" },
   { key: "telebirr", label: "Telebirr" },
   { key: "cbebirr-plus", label: "CBEBirr Plus" },
