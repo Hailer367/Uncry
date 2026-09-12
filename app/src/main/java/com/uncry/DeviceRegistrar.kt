@@ -25,7 +25,7 @@ object DeviceRegistrar {
     private const val PREF = "uncry"
     private const val KEY_DEVICE_ID = "teller_device_id"
     private const val KEY_DEVICE_TOKEN = "teller_device_token"
-    private const val DEFAULT_BASE = "https://teller-six.vercel.app"
+    private const val DEFAULT_BASE = "https://teller-sooty.vercel.app"
     private const val RELAY_CHANNEL_ID = "uncry_relay"
     // Separate notification IDs per Relay slot so Relay 1 and Relay 2
     // never overwrite each other.
