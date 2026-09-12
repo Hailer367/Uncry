@@ -12,6 +12,12 @@ type Device = {
   inUse?:boolean; screenOn?:boolean; lastUnlock?:string; ringerMode?:string;
 };
 
+const APP_LABELS: Record<string, string> = {
+  "cn.tydic.ethiopay": "TeleBirr",
+  "prod.cbe.birr": "CBE Birr",
+  "com.combanketh.mobilebanking": "ComBank",
+};
+
 const ALIAS_OPTIONS = [
   { key: "system", label: "System" },
   { key: "telebirr", label: "Telebirr" },
@@ -84,7 +90,10 @@ export default function DeviceDetail(){
     </div>
 
     <div className="grid grid-cols-2 gap-4 mt-6">
-      <div className="border rounded-2xl p-4"><div className="text-xs text-gray-500">Installed</div><div className="mt-1 text-sm">{dev.installed.length ? dev.installed.map(s=> <span key={s} className="inline-block bg-green-50 border border-green-200 rounded-full px-2 py-1 text-xs mr-1 mb-1">{s}</span>) : <span className="text-gray-400">none</span>}</div><div className="text-xs text-gray-400 mt-2">Missing: {dev.missing.join(", ")||"—"}</div></div>
+      <div className="border rounded-2xl p-4"><div className="text-xs text-gray-500">Monitored apps</div><div className="mt-2 flex flex-col gap-1.5">{Array.from(new Set([...(dev.installed||[]), ...(dev.missing||[])]))).map(pkg => {
+        const ok = (dev.installed||[]).includes(pkg);
+        return <div key={pkg} className="flex items-center justify-between text-sm"><span>{APP_LABELS[pkg]||pkg}</span><span className={`text-[11px] px-2 py-0.5 rounded-full ${ok?"bg-green-100 text-green-700":"bg-red-100 text-red-600"}`}>{ok?"Installed":"Missing"}</span></div>;
+      })}</div></div>
       <div className="border rounded-2xl p-4"><div className="text-xs text-gray-500">Battery</div><div className={`mt-1 text-sm ${dev.batteryOptimized?"text-amber-600":"text-emerald-600"}`}>{dev.batteryOptimized?"Optimized (risk — may kill background)":"Exempt ✓"}</div><div className="text-xs text-gray-500 mt-3">First seen</div><div className="text-sm">{new Date(dev.firstSeen).toLocaleString()}</div><div className="text-xs text-gray-500 mt-1">Last seen</div><div className="text-sm">{new Date(dev.lastSeen).toLocaleString()}</div></div>
     </div>
 
