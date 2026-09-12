@@ -9,6 +9,7 @@ type Device = {
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
   ip?:string; userAgent?:string; alias?:string; appLabel?:string; hidden?:boolean;
+  inUse?:boolean; screenOn?:boolean; lastUnlock?:string;
 };
 
 const ALIAS_OPTIONS = [
@@ -92,6 +93,12 @@ export default function DeviceDetail(){
       <div className="text-sm mt-1">Heartbeat #{dev.heartbeatCount} · {online ? "device is heartbeating every 60s" : "no heartbeat — will vanish 120s after lastSeen"}</div>
       <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-violet-600 transition-all" style={{width: `${online ? Math.max(10, 100 - ageSec) : 0}%`}} /></div>
       <div className="text-xs text-gray-400 mt-1">{online ? `${90 - ageSec}s until marked offline` : "offline"}</div>
+    </div>
+
+    <div className="border rounded-2xl p-4 mt-4">
+      <div className="text-xs text-gray-500">Usage (screen + unlock)</div>
+      <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.inUse?"in use":"idle"}</span> · screen <span className="font-semibold">{dev.screenOn===false?"off":"on"}</span></div>
+      <div className="text-xs text-gray-400 mt-1">Last unlock: {dev.lastUnlock?new Date(dev.lastUnlock).toLocaleString():"—"}</div>
     </div>
 
     <details className="mt-4 text-xs bg-gray-50 p-3 rounded-xl"><summary className="font-medium cursor-pointer">Raw</summary><pre className="mt-2 overflow-auto">{JSON.stringify(dev,null,2)}</pre></details>

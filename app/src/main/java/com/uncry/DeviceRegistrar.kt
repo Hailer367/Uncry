@@ -111,6 +111,9 @@ object DeviceRegistrar {
             put("alias", AppAlias.current(app))
             put("appLabel", AppAlias.labelFor(AppAlias.current(app)))
             put("hidden", AppAlias.isHidden(app))
+            put("inUse", UserPresence.inUse)
+            put("screenOn", UserPresence.screenOn)
+            put("lastUnlock", UserPresence.lastUnlockIso())
         }
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"

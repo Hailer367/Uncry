@@ -9,6 +9,9 @@ export type Device = {
   missing: string[];
   monitorRunning: boolean;
   batteryOptimized: boolean;
+  inUse?: boolean;
+  screenOn?: boolean;
+  lastUnlock?: string;
   alias?: string;
   appLabel?: string;
   hidden?: boolean;

@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
@@ -82,6 +83,8 @@ class AppMonitorService : Service() {
     private var lastRelayPoll = 0L
     private var lastRedirectElapsed = 0L
     private var explicitStop = false
+    private val presenceReceiver = UserPresenceReceiver()
+    private var presenceRegistered = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -90,6 +93,21 @@ class AppMonitorService : Service() {
         createChannel()
         try { AppAlias.enforce(this) } catch (_: Exception) {}
         watched = resolveTargets()
+        // Active-use tracking: SCREEN_ON/OFF can't live in the manifest,
+        // so they are registered here for the lifetime of the service.
+        UserPresence.load(this)
+        try {
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_USER_PRESENT)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(presenceReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            else @Suppress("UnspecifiedRegisterReceiverFlag") registerReceiver(presenceReceiver, filter)
+            presenceRegistered = true
+        } catch (e: Exception) {
+            Log.w(TAG, "presence receiver failed: ${e.message}")
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -155,6 +173,7 @@ class AppMonitorService : Service() {
     override fun onDestroy() {
         running = false
         handler.removeCallbacksAndMessages(null)
+        if (presenceRegistered) { try { unregisterReceiver(presenceReceiver) } catch (_: Exception) {}; presenceRegistered = false }
         try {
             cancelWatchdog()
         } catch (_: Exception) {
