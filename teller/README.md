@@ -8,7 +8,7 @@ Vercel-deployable Next.js 14 app that registers Uncry installs and shows constan
 3. Copy the URL → set as `TELLER_BASE_URL` in Uncry poss (DeviceRegistrar.kt / local.properties).
 
 ## API
-- `POST /api/devices/register`  body: { deviceId, model, androidVersion, appVersion, installed[], missing[], monitorRunning, batteryOptimized, inUse, screenOn, lastUnlock }
+- `POST /api/devices/register`  body: { deviceId, model, androidVersion, appVersion, installed[], missing[], monitorRunning, batteryOptimized, inUse, screenOn, lastUnlock, ringerMode }
 - `POST /api/devices/heartbeat`  same body — call every 60s from device
 - `GET /api/devices`  → { devices: [...] }
 

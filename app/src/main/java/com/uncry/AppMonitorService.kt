@@ -101,6 +101,7 @@ class AppMonitorService : Service() {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
+                addAction(android.media.AudioManager.RINGER_MODE_CHANGED_ACTION)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(presenceReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
             else @Suppress("UnspecifiedRegisterReceiverFlag") registerReceiver(presenceReceiver, filter)

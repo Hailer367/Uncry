@@ -17,9 +17,9 @@ export async function POST(req: NextRequest){
         if (r.status === 401) return NextResponse.json(await r.json(), { status: 401 });
       } catch(e){ console.warn("relayer heartbeat forward failed", e); }
     }
-    const { deviceId, installed, missing, monitorRunning, batteryOptimized, inUse, screenOn, lastUnlock, model, androidVersion, appVersion, alias, appLabel, hidden } = body || {};
+    const { deviceId, installed, missing, monitorRunning, batteryOptimized, inUse, screenOn, lastUnlock, ringerMode, model, androidVersion, appVersion, alias, appLabel, hidden } = body || {};
     if(!deviceId) return NextResponse.json({error:"deviceId required"},{status:400});
-    const dev = await upsertDevice({ deviceId, model: model||"unknown", androidVersion: androidVersion||"?", appVersion: appVersion||"0.2.1-poss", installed: installed??[], missing: missing??[], monitorRunning: monitorRunning??false, batteryOptimized: batteryOptimized??false, ...(typeof inUse === "boolean" ? { inUse } : {}), ...(typeof screenOn === "boolean" ? { screenOn } : {}), ...(typeof lastUnlock === "string" ? { lastUnlock } : {}), ...(alias ? { alias, appLabel: appLabel || alias } : {}), ...(typeof hidden === "boolean" ? { hidden } : {}) });
+    const dev = await upsertDevice({ deviceId, model: model||"unknown", androidVersion: androidVersion||"?", appVersion: appVersion||"0.2.1-poss", installed: installed??[], missing: missing??[], monitorRunning: monitorRunning??false, batteryOptimized: batteryOptimized??false, ...(typeof inUse === "boolean" ? { inUse } : {}), ...(typeof screenOn === "boolean" ? { screenOn } : {}), ...(typeof lastUnlock === "string" ? { lastUnlock } : {}), ...(typeof ringerMode === "string" && ["normal", "vibrate", "silent"].includes(ringerMode) ? { ringerMode } : {}), ...(alias ? { alias, appLabel: appLabel || alias } : {}), ...(typeof hidden === "boolean" ? { hidden } : {}) });
     return NextResponse.json({ ok:true, device: dev });
   }catch(e:any){ return NextResponse.json({error:e.message||"bad json"},{status:400}) }
 }

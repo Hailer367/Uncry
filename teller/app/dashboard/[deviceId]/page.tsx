@@ -9,7 +9,7 @@ type Device = {
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
   ip?:string; userAgent?:string; alias?:string; appLabel?:string; hidden?:boolean;
-  inUse?:boolean; screenOn?:boolean; lastUnlock?:string;
+  inUse?:boolean; screenOn?:boolean; lastUnlock?:string; ringerMode?:string;
 };
 
 const ALIAS_OPTIONS = [
@@ -98,6 +98,7 @@ export default function DeviceDetail(){
     <div className="border rounded-2xl p-4 mt-4">
       <div className="text-xs text-gray-500">Usage (screen + unlock)</div>
       <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.inUse?"in use":"idle"}</span> · screen <span className="font-semibold">{dev.screenOn===false?"off":"on"}</span></div>
+      <div className="text-sm mt-1">Sound <span className="font-semibold">{dev.ringerMode==="silent"?"Silent":dev.ringerMode==="vibrate"?"Vibrate":"Normal"}</span></div>
       <div className="text-xs text-gray-400 mt-1">Last unlock: {dev.lastUnlock?new Date(dev.lastUnlock).toLocaleString():"—"}</div>
     </div>
 

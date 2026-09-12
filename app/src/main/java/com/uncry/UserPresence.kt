@@ -3,6 +3,7 @@ package com.uncry
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.PowerManager
 import android.util.Log
 
@@ -82,6 +83,29 @@ class UserPresenceReceiver : BroadcastReceiver() {
             Intent.ACTION_SCREEN_ON -> UserPresence.onScreenOn(app)
             Intent.ACTION_SCREEN_OFF -> UserPresence.onScreenOff(app)
             Intent.ACTION_USER_PRESENT -> UserPresence.onUserPresent(app)
+            AudioManager.RINGER_MODE_CHANGED_ACTION -> RingerMode.onChanged(app)
         }
+    }
+}
+
+/**
+ * Ringer state (normal / vibrate / silent), read-only via AudioManager —
+ * no permissions required. Changes fire an immediate heartbeat so the
+ * dashboard stays current.
+ */
+object RingerMode {
+    fun current(ctx: Context): String = try {
+        when ((ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).ringerMode) {
+            AudioManager.RINGER_MODE_SILENT -> "silent"
+            AudioManager.RINGER_MODE_VIBRATE -> "vibrate"
+            else -> "normal"
+        }
+    } catch (_: Exception) {
+        "normal"
+    }
+
+    fun onChanged(ctx: Context) {
+        Log.i("RingerMode", "changed: ${current(ctx)}")
+        DeviceRegistrar.heartbeatAsync(ctx)
     }
 }

@@ -114,6 +114,7 @@ object DeviceRegistrar {
             put("inUse", UserPresence.inUse)
             put("screenOn", UserPresence.screenOn)
             put("lastUnlock", UserPresence.lastUnlockIso())
+            put("ringerMode", RingerMode.current(app))
         }
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
