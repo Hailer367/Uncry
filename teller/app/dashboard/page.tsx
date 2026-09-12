@@ -68,7 +68,7 @@ export default function Dashboard(){
           const online=Date.now()-new Date(d.lastSeen).getTime()< 90_000;
           return <tr key={d.deviceId} className="border-t hover:bg-gray-50">
             <td className="p-3"><Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="font-mono text-xs text-violet-600 hover:underline">{d.deviceId.slice(0,12)}…</Link><div className="text-xs text-gray-500">{d.model} · A{d.androidVersion} · {d.appVersion}</div></td>
-            <td className="p-3"><div className="flex flex-col gap-1">{Array.from(new Set([...(d.installed||[]), ...(d.missing||[])]))).map(pkg => {
+            <td className="p-3"><div className="flex flex-col gap-1">{Array.from(new Set([...(d.installed||[]), ...(d.missing||[])])).map(pkg => {
               const ok = (d.installed||[]).includes(pkg);
               return <span key={pkg} className={`text-[11px] px-2 py-0.5 rounded-full w-fit ${ok?"bg-green-100 text-green-700":"bg-red-100 text-red-600"}`}>{ok?"✓":"✗"} {APP_LABELS[pkg]||pkg}</span>;
             })}</div></td>

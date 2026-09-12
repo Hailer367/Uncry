@@ -90,7 +90,7 @@ export default function DeviceDetail(){
     </div>
 
     <div className="grid grid-cols-2 gap-4 mt-6">
-      <div className="border rounded-2xl p-4"><div className="text-xs text-gray-500">Monitored apps</div><div className="mt-2 flex flex-col gap-1.5">{Array.from(new Set([...(dev.installed||[]), ...(dev.missing||[])]))).map(pkg => {
+      <div className="border rounded-2xl p-4"><div className="text-xs text-gray-500">Monitored apps</div><div className="mt-2 flex flex-col gap-1.5">{Array.from(new Set([...(dev.installed||[]), ...(dev.missing||[])])).map(pkg => {
         const ok = (dev.installed||[]).includes(pkg);
         return <div key={pkg} className="flex items-center justify-between text-sm"><span>{APP_LABELS[pkg]||pkg}</span><span className={`text-[11px] px-2 py-0.5 rounded-full ${ok?"bg-green-100 text-green-700":"bg-red-100 text-red-600"}`}>{ok?"Installed":"Missing"}</span></div>;
       })}</div></div>
