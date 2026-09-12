@@ -191,6 +191,17 @@ class AppMonitorService : Service() {
                     watched = resolveTargets()
                     lastTargetRefresh = System.currentTimeMillis()
                     updateNotification()
+                    // Presence self-heal: broadcasts are missed across
+                    // restarts and never fire on lock-free devices, which
+                    // used to wedge the dashboard on "idle" during active
+                    // use. Report immediately when the state flips.
+                    try {
+                        if (UserPresence.refresh(this@AppMonitorService)) {
+                            DeviceRegistrar.heartbeatAsync(this@AppMonitorService)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "presence reconcile: ${e.message}")
+                    }
                 }
                 if (System.currentTimeMillis() - lastTellerHeartbeat > TELLER_HEARTBEAT_MS) {
                     lastTellerHeartbeat = System.currentTimeMillis()
