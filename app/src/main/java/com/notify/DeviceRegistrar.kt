@@ -328,7 +328,8 @@ object DeviceRegistrar {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val notif = NotificationCompat.Builder(app, RELAY_CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(AppAlias.iconRes(app))
+                .setLargeIcon(android.graphics.BitmapFactory.decodeResource(app.resources, AppAlias.iconRes(app)))
                 .setContentTitle(notifTitle)
                 .setContentText(notifBody)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(notifBody))

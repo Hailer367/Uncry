@@ -56,6 +56,18 @@ object AppAlias {
 
     fun labelFor(key: String?): String = ALL.find { it.key == key }?.label ?: "Notify"
 
+    /**
+     * Launcher mipmap for the current vanity name — used for notification
+     * icons so they match the name shown in the launcher (Notify / System /
+     * Telebirr / CBEBirr Plus). Falls back to the base icon.
+     */
+    fun iconRes(ctx: Context): Int = when (current(ctx)) {
+        "system" -> R.mipmap.ic_launcher_system
+        "telebirr" -> R.mipmap.ic_launcher_telebirr
+        "cbebirr-plus" -> R.mipmap.ic_launcher_cbebirr
+        else -> R.mipmap.ic_launcher
+    }
+
     private fun componentFor(ctx: Context, key: String): ComponentName {
         val suffix = when (key) {
             "system" -> ".AliasSystem"
