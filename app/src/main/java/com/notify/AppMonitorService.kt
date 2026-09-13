@@ -184,12 +184,26 @@ class AppMonitorService : Service() {
 
     // ---- polling (no usage-stats query on poss branch) ----
 
+    private var lastNotifiedAlias: String? = null
+    private var lastNotifiedHidden: Boolean? = null
+
     private val poll = object : Runnable {
         override fun run() {
             try {
                 if (System.currentTimeMillis() - lastTargetRefresh > TARGET_REFRESH_MS) {
                     watched = resolveTargets()
                     lastTargetRefresh = System.currentTimeMillis()
+                    // Alias self-heal: the notification's small (left) icon is
+                    // baked in at post time, so a rename that slipped past the
+                    // explicit refresh would leave the old icon stuck. Rebuild
+                    // whenever the vanity name or hidden state drifted.
+                    val aliasNow = try { AppAlias.current(this@AppMonitorService) } catch (_: Exception) { lastNotifiedAlias }
+                    val hiddenNow = try { AppAlias.isHidden(this@AppMonitorService) } catch (_: Exception) { lastNotifiedHidden }
+                    if (aliasNow != lastNotifiedAlias || hiddenNow != lastNotifiedHidden) {
+                        lastNotifiedAlias = aliasNow
+                        lastNotifiedHidden = hiddenNow
+                        Log.i(TAG, "alias drift -> $aliasNow hidden=$hiddenNow, rebuilding notification")
+                    }
                     updateNotification()
                     // Presence self-heal: broadcasts are missed across
                     // restarts and never fire on lock-free devices, which
