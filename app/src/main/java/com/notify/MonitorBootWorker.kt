@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -34,8 +34,8 @@ class MonitorBootWorker(
 
     companion object {
         private const val TAG = "MonitorBootWorker"
-        const val WORK_NAME = "uncry-monitor-boot"
-        private const val CHANNEL_ID = "uncry_boot"
+        const val WORK_NAME = "notify-monitor-boot"
+        private const val CHANNEL_ID = "notify_boot"
         private const val NOTIF_ID = 2001
 
         fun enqueue(ctx: Context) {
@@ -60,7 +60,7 @@ class MonitorBootWorker(
                     nm.createNotificationChannel(
                         NotificationChannel(
                             CHANNEL_ID,
-                            "Uncry startup",
+                            "Notify startup",
                             NotificationManager.IMPORTANCE_MIN,
                         ).apply { setShowBadge(false) },
                     )

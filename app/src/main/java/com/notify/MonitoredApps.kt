@@ -1,9 +1,9 @@
-package com.uncry
+package com.notify
 
 import android.content.pm.PackageManager
 import android.os.Build
 
-/** Default packages Uncry watches, plus install-state helpers. */
+/** Default packages Notify watches, plus install-state helpers. */
 object MonitoredApps {
     const val TELEBIRR = "cn.tydic.ethiopay"
     const val CBE_BIRR = "prod.cbe.birr"

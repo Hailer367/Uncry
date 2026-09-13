@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.content.BroadcastReceiver
 import android.content.Context

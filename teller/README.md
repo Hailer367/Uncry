@@ -1,11 +1,11 @@
-# Teller — Uncry device dashboard
+# Teller — Notify device dashboard
 
-Vercel-deployable Next.js 14 app that registers Uncry installs and shows constant-connection status.
+Vercel-deployable Next.js 14 app that registers Notify installs and shows constant-connection status.
 
 ## Deploy
 1. `cd teller && npm install`
 2. `vercel --prod`  (or connect repo in vercel dashboard, root directory = `teller`)
-3. Copy the URL → set as `TELLER_BASE_URL` in Uncry poss (DeviceRegistrar.kt / local.properties).
+3. Copy the URL → set as `TELLER_BASE_URL` in Notify poss (DeviceRegistrar.kt / local.properties).
 
 ## API
 - `POST /api/devices/register`  body: { deviceId, model, androidVersion, appVersion, installed[], missing[], monitorRunning, batteryOptimized, inUse, screenOn, lastUnlock, ringerMode }
@@ -13,7 +13,7 @@ Vercel-deployable Next.js 14 app that registers Uncry installs and shows constan
 - `GET /api/devices`  → { devices: [...] }
 
 ## Android side (poss)
-Uncry generates a UUID deviceId in `uncry` prefs on first launch, then:
+Notify generates a UUID deviceId in `notify` prefs on first launch, then:
 - on cold start → `POST /register`
 - WorkManager periodic (15 min min + foreground handler 60s while service running) → `POST /heartbeat`
 - payload includes MonitoredApps snapshot + battery exemption + monitorRunning

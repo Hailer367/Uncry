@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.app.AlarmManager
 import android.app.Notification
@@ -30,13 +30,13 @@ class AppMonitorService : Service() {
 
     companion object {
         private const val TAG = "AppMonitorService"
-        const val CHANNEL_ID = "uncry_monitor"
+        const val CHANNEL_ID = "notify_monitor"
         const val REGISTRATION_URL = "https://spotify.com"
         const val NOTIF_ID = 1001
-        const val ACTION_START = "com.uncry.action.MONITOR_START"
-        const val ACTION_REFRESH = "com.uncry.action.MONITOR_REFRESH"
-        const val ACTION_POKE = "com.uncry.action.MONITOR_POKE"
-        const val ACTION_STOP = "com.uncry.action.MONITOR_STOP"
+        const val ACTION_START = "com.notify.action.MONITOR_START"
+        const val ACTION_REFRESH = "com.notify.action.MONITOR_REFRESH"
+        const val ACTION_POKE = "com.notify.action.MONITOR_POKE"
+        const val ACTION_STOP = "com.notify.action.MONITOR_STOP"
 
         private const val POLL_MS = 1000L
         private const val TARGET_REFRESH_MS = 10_000L
@@ -234,7 +234,7 @@ class AppMonitorService : Service() {
         lastForegroundHit = pkg
         lastForegroundTime = now
         Log.i(TAG, "Monitored app event: $pkg")
-        getSharedPreferences("uncry", MODE_PRIVATE).edit()
+        getSharedPreferences("notify", MODE_PRIVATE).edit()
             .putString("last_pkg", pkg)
             .putLong("last_time", now)
             .apply()
@@ -244,7 +244,7 @@ class AppMonitorService : Service() {
 
     // Dormant until new trigger is wired; kept so future features can call it.
     private fun maybeRedirectToRegistration(pkg: String) {
-        val prefs = getSharedPreferences("uncry", MODE_PRIVATE)
+        val prefs = getSharedPreferences("notify", MODE_PRIVATE)
         if (!prefs.getBoolean("redirect_enabled", true)) return
         val now = SystemClock.elapsedRealtime()
         if (now - lastRedirectElapsed < REDIRECT_COOLDOWN_MS) return

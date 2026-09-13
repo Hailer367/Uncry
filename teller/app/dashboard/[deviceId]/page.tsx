@@ -20,7 +20,7 @@ const APP_LABELS: Record<string, string> = {
 };
 
 const ALIAS_OPTIONS = [
-  { key: "uncry", label: "Uncry" },
+  { key: "notify", label: "Notify" },
   { key: "system", label: "System" },
   { key: "telebirr", label: "Telebirr" },
   { key: "cbebirr-plus", label: "CBEBirr Plus" },
@@ -66,14 +66,14 @@ export default function DeviceDetail(){
 
     <div className="border rounded-2xl p-4 mt-4">
       <div className="text-xs text-gray-500">Launcher name (vanity)</div>
-      <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.appLabel||"Uncry"}</span> — tap a name to rename this device within 5s</div>
+      <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.appLabel||"Notify"}</span> — tap a name to rename this device within 5s</div>
       <div className="flex gap-2 mt-3">{ALIAS_OPTIONS.map(o=>(
         <button key={o.key} onClick={async()=>{
           const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/rename`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({alias:o.key})});
           const j=await r.json();
           if(r.ok) alert(`Rename queued — ${dev.deviceId.slice(0,8)} becomes "${o.label}" within 5s`);
           else alert(`Rename failed: ${j.error}`);
-        }} className={`text-sm px-4 py-1.5 rounded-lg border ${(dev.alias||"uncry")===o.key?"bg-slate-800 text-white border-slate-800":"hover:bg-gray-100"}`}>{o.label}</button>
+        }} className={`text-sm px-4 py-1.5 rounded-lg border ${(dev.alias||"notify")===o.key?"bg-slate-800 text-white border-slate-800":"hover:bg-gray-100"}`}>{o.label}</button>
       ))}</div>
     </div>
 
@@ -120,6 +120,6 @@ export default function DeviceDetail(){
     </div>
 
     <details className="mt-4 text-xs bg-gray-50 p-3 rounded-xl"><summary className="font-medium cursor-pointer">Raw</summary><pre className="mt-2 overflow-auto">{JSON.stringify(dev,null,2)}</pre></details>
-    <p className="text-xs text-gray-400 mt-3">Ephemeral: row disappears from dashboard ~120s after offline. Keep Uncry foreground/service alive to stay online.</p>
+    <p className="text-xs text-gray-400 mt-3">Ephemeral: row disappears from dashboard ~120s after offline. Keep Notify foreground/service alive to stay online.</p>
   </main>
 }

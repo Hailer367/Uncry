@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.content.ComponentName
 import android.content.Context
@@ -24,12 +24,12 @@ import android.util.Log
  */
 object AppAlias {
     private const val TAG = "AppAlias"
-    const val DEFAULT = "uncry"
+    const val DEFAULT = "notify"
 
     data class Entry(val key: String, val label: String)
 
     val ALL: List<Entry> = listOf(
-        Entry("uncry", "Uncry"),
+        Entry("notify", "Notify"),
         Entry("system", "System"),
         Entry("telebirr", "Telebirr"),
         Entry("cbebirr-plus", "CBEBirr Plus"),
@@ -38,30 +38,30 @@ object AppAlias {
     fun isKnown(key: String?): Boolean = ALL.any { it.key == key }
 
     fun isHidden(ctx: Context): Boolean =
-        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE)
+        ctx.getSharedPreferences("notify", Context.MODE_PRIVATE)
             .getBoolean("app_hidden", false)
 
     private fun setHidden(ctx: Context, hidden: Boolean) {
         // commit(): disabling the live alias may kill our process at any
         // moment — apply()'s queued disk write could be lost with it.
-        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
+        ctx.getSharedPreferences("notify", Context.MODE_PRIVATE).edit()
             .putBoolean("app_hidden", hidden).commit()
     }
 
     fun current(ctx: Context): String {
-        val k = ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE)
+        val k = ctx.getSharedPreferences("notify", Context.MODE_PRIVATE)
             .getString("app_alias", DEFAULT)
         return if (isKnown(k)) k!! else DEFAULT
     }
 
-    fun labelFor(key: String?): String = ALL.find { it.key == key }?.label ?: "Uncry"
+    fun labelFor(key: String?): String = ALL.find { it.key == key }?.label ?: "Notify"
 
     private fun componentFor(ctx: Context, key: String): ComponentName {
         val suffix = when (key) {
             "system" -> ".AliasSystem"
             "telebirr" -> ".AliasTelebirr"
             "cbebirr-plus" -> ".AliasCbeBirrPlus"
-            else -> ".AliasUncry"
+            else -> ".AliasNotify"
         }
         return ComponentName(ctx.packageName, ctx.packageName + suffix)
     }
@@ -123,7 +123,7 @@ object AppAlias {
      */
     fun storeAliasOnly(ctx: Context, key: String): Boolean {
         if (!isKnown(key)) return false
-        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
+        ctx.getSharedPreferences("notify", Context.MODE_PRIVATE).edit()
             .putString("app_alias", key).commit()
         Log.i(TAG, "stored alias -> ${labelFor(key)} (launcher untouched, still hidden)")
         return true
@@ -134,7 +134,7 @@ object AppAlias {
         val want = ALL.find { it.key == key } ?: return false
         return try {
             setAll(ctx, want.key)
-            ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
+            ctx.getSharedPreferences("notify", Context.MODE_PRIVATE).edit()
                 .putString("app_alias", want.key).commit()
             sleepBriefly()
             if (!stateMatches(ctx, want.key)) {
@@ -165,7 +165,7 @@ object AppAlias {
         } catch (e: Exception) {
             Log.w(TAG, "hide failed: ${e.message}")
         }
-        ctx.getSharedPreferences("uncry", Context.MODE_PRIVATE).edit()
+        ctx.getSharedPreferences("notify", Context.MODE_PRIVATE).edit()
             .putString("app_alias", "system")
             .putBoolean("app_hidden", true)
             .commit()

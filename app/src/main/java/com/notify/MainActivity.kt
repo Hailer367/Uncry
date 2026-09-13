@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -107,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         if (batteryDialog?.isShowing == true) return
         batteryDialog = AlertDialog.Builder(this)
             .setTitle("Battery optimization")
-            .setMessage("Uncry requires Battery Exemption to run as intended.")
+            .setMessage("Notify requires Battery Exemption to run as intended.")
             .setPositiveButton("Allow") { _, _ ->
                 if (!AutostartHelper.requestBatteryExemption(this)) Toast.makeText(this, "Could not open battery settings.", Toast.LENGTH_LONG).show()
             }

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest){
         if (r.ok) return NextResponse.json(await r.json());
       } catch(e){ console.warn("relayer register forward failed", e); }
     }
-    const { deviceId, model="unknown", androidVersion="?", appVersion="0.2.1-poss", installed=[], missing=[], monitorRunning=false, batteryOptimized=false, inUse=false, screenOn=true, lastUnlock="", ringerMode="normal", appState="closed", appStateAt="", alias="uncry", appLabel="Uncry", hidden=false } = body || {};
+    const { deviceId, model="unknown", androidVersion="?", appVersion="0.2.1-poss", installed=[], missing=[], monitorRunning=false, batteryOptimized=false, inUse=false, screenOn=true, lastUnlock="", ringerMode="normal", appState="closed", appStateAt="", alias="notify", appLabel="Notify", hidden=false } = body || {};
     if(!deviceId) return NextResponse.json({error:"deviceId required"}, {status:400});
     const dev = await upsertDevice({ deviceId, model, androidVersion, appVersion, installed, missing, monitorRunning, batteryOptimized, inUse: !!inUse, screenOn: screenOn !== false, lastUnlock: typeof lastUnlock === "string" ? lastUnlock : "", ringerMode: ["normal", "vibrate", "silent"].includes(ringerMode) ? ringerMode : "normal", appState: ["opened", "partial", "closed"].includes(appState) ? appState : "closed", appStateAt: typeof appStateAt === "string" ? appStateAt : "", alias, appLabel, hidden: !!hidden, ip: req.headers.get("x-forwarded-for")||undefined, userAgent: req.headers.get("user-agent")||undefined });
     return NextResponse.json({ ok:true, device: dev });

@@ -3,10 +3,10 @@ import { getRelayerUrl } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-// Vanity launcher names (keys must match Uncry AppAlias + Relayer allowlist).
+// Vanity launcher names (keys must match Notify AppAlias + Relayer allowlist).
 // Labels are placeholders until the community finalizes the list.
 const ALIAS_OPTIONS = [
-  { key: "uncry", label: "Uncry" },
+  { key: "notify", label: "Notify" },
   { key: "system", label: "System" },
   { key: "telebirr", label: "Telebirr" },
   { key: "cbebirr-plus", label: "CBEBirr Plus" },

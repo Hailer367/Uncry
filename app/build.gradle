@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    namespace 'com.uncry'
+    namespace 'com.notify'
     compileSdk 34
     buildFeatures { buildConfig true }
 
     defaultConfig {
-        applicationId 'com.uncry'
+        applicationId 'com.notify'
         minSdk 26
         targetSdk 34
         versionCode 3

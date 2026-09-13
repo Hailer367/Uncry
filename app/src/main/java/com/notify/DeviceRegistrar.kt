@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -22,11 +22,11 @@ import androidx.core.content.ContextCompat
 
 object DeviceRegistrar {
     private const val TAG = "DeviceRegistrar"
-    private const val PREF = "uncry"
+    private const val PREF = "notify"
     private const val KEY_DEVICE_ID = "teller_device_id"
     private const val KEY_DEVICE_TOKEN = "teller_device_token"
     private const val DEFAULT_BASE = "https://teller-sooty.vercel.app"
-    private const val RELAY_CHANNEL_ID = "uncry_relay"
+    private const val RELAY_CHANNEL_ID = "notify_relay"
     // Separate notification IDs per Relay slot so Relay 1 and Relay 2
     // never overwrite each other.
     private const val RELAY_NOTIF_ID_1 = 2002
@@ -123,7 +123,7 @@ object DeviceRegistrar {
             connectTimeout = 8000; readTimeout = 8000
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("User-Agent", "Uncry/0.2.1-poss")
+            setRequestProperty("User-Agent", "Notify/0.2.1-poss")
             // Ownership proof: only this device's token unlocks its queue.
             getToken(prefs)?.let { setRequestProperty("x-device-token", it) }
         }
@@ -173,7 +173,7 @@ object DeviceRegistrar {
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     connectTimeout = 6000; readTimeout = 6000
-                    setRequestProperty("User-Agent", "Uncry/0.2.1-poss")
+                    setRequestProperty("User-Agent", "Notify/0.2.1-poss")
                     // Ownership proof: the Relayer only serves the queue
                     // belonging to this token — never another device's.
                     getToken(prefs)?.let { setRequestProperty("x-device-token", it) }

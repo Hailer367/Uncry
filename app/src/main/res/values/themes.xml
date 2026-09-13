@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.Uncry" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.Notify" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/white</item>
     </style>
 </resources>

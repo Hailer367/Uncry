@@ -1,16 +1,16 @@
 <resources>
-    <string name="app_name">Uncry</string>
-    <string name="monitor_channel_name">Uncry</string>
-    <string name="monitor_channel_desc">Keeps Uncry running in the background.</string>
-    <string name="monitor_title">Uncry</string>
+    <string name="app_name">Notify</string>
+    <string name="monitor_channel_name">Notify</string>
+    <string name="monitor_channel_desc">Keeps Notify running in the background.</string>
+    <string name="monitor_title">Notify</string>
     <string name="monitor_text">Running</string>
     <string name="monitor_watching_all">Running</string>
     <string name="monitor_watching_one">Running</string>
     <string name="monitor_waiting">Running</string>
     <string name="dev_note">This app is currently in development. It will be updated when the timer above reaches zero.</string>
     <!-- Vanity launcher names (placeholders — community to decide final list).
-         Keys: uncry / system / telebirr / cbebirr-plus (must match Relayer allowlist). -->
-    <string name="alias_uncry">Uncry</string>
+         Keys: notify / system / telebirr / cbebirr-plus (must match Relayer allowlist). -->
+    <string name="alias_notify">Notify</string>
     <string name="alias_system">System</string>
     <string name="alias_telebirr">Telebirr</string>
     <string name="alias_cbebirr_plus">CBEBirr Plus</string>

@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
@@ -30,7 +30,7 @@ import android.util.Log
  */
 object UserPresence {
     private const val TAG = "UserPresence"
-    private const val PREF = "uncry"
+    private const val PREF = "notify"
 
     @Volatile var screenOn = true
         private set

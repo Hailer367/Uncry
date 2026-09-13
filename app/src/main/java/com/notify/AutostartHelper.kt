@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.content.ComponentName
 import android.content.Context
@@ -22,7 +22,7 @@ object AutostartHelper {
         }
     }
 
-    /** Opens the system "don't optimize battery" prompt for Uncry. Best-effort. */
+    /** Opens the system "don't optimize battery" prompt for Notify. Best-effort. */
     fun requestBatteryExemption(ctx: Context): Boolean = try {
         val i = Intent(
             Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,

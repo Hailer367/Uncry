@@ -1,4 +1,4 @@
-package com.uncry
+package com.notify
 
 import android.content.Context
 import android.util.Log
@@ -21,7 +21,7 @@ object AppForeground {
     const val PARTIAL = "partial"
     const val CLOSED = "closed"
 
-    private const val PREF = "uncry"
+    private const val PREF = "notify"
     private const val KEY_STATE = "app_state"
     private const val KEY_STATE_AT = "app_state_at"
 

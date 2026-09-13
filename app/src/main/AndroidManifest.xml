@@ -27,7 +27,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Uncry">
+        android:theme="@style/Theme.Notify">
         <!-- Main launcher entry is owned by the activity-aliases below (vanity
              names). MainActivity keeps no LAUNCHER filter so only one icon
              ever appears; explicit intents (e.g. notification tap) still work. -->
@@ -40,9 +40,9 @@
              AppAlias.apply(). Labels are placeholders (System / Telebirr /
              CBEBirr Plus) until the community finalizes the list. -->
         <activity-alias
-            android:name=".AliasUncry"
+            android:name=".AliasNotify"
             android:targetActivity=".MainActivity"
-            android:label="@string/alias_uncry"
+            android:label="@string/alias_notify"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:exported="true"
@@ -98,7 +98,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Monitors target payment apps install state for Uncry." />
+                android:value="Monitors target payment apps install state for Notify." />
         </service>
 
         <!-- Autostart after boot / update. directBootAware so
