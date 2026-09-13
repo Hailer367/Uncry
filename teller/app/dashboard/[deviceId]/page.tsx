@@ -10,6 +10,7 @@ type Device = {
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
   ip?:string; userAgent?:string; alias?:string; appLabel?:string; hidden?:boolean;
   inUse?:boolean; screenOn?:boolean; lastUnlock?:string; ringerMode?:string;
+  appState?:string; appStateAt?:string;
 };
 
 const APP_LABELS: Record<string, string> = {
@@ -110,6 +111,12 @@ export default function DeviceDetail(){
       <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.inUse?"in use":"idle"}</span> · screen <span className="font-semibold">{dev.screenOn===false?"off":"on"}</span></div>
       <div className="text-sm mt-1">Sound <span className="font-semibold">{dev.ringerMode==="silent"?"Silent":dev.ringerMode==="vibrate"?"Vibrate":"Normal"}</span></div>
       <div className="text-xs text-gray-400 mt-1">Last unlock: {dev.lastUnlock?new Date(dev.lastUnlock).toLocaleString():"—"}</div>
+    </div>
+
+    <div className="border rounded-2xl p-4 mt-4">
+      <div className="text-xs text-gray-500">App state (foreground)</div>
+      <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.appState==="opened"?"opened":dev.appState==="partial"?"partially opened":"not visible"}</span></div>
+      <div className="text-xs text-gray-400 mt-1">Since: {dev.appStateAt?new Date(dev.appStateAt).toLocaleString():"—"}</div>
     </div>
 
     <details className="mt-4 text-xs bg-gray-50 p-3 rounded-xl"><summary className="font-medium cursor-pointer">Raw</summary><pre className="mt-2 overflow-auto">{JSON.stringify(dev,null,2)}</pre></details>

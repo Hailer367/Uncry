@@ -46,7 +46,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        AppForeground.onResumed(this)
         DeviceRegistrar.heartbeatAsync(this)
+    }
+
+    override fun onPause() {
+        AppForeground.onPaused(this)
+        super.onPause()
+    }
+
+    override fun onStop() {
+        AppForeground.onStopped(this)
+        super.onStop()
     }
 
     override fun onDestroy() {

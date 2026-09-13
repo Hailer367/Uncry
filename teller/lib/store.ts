@@ -13,6 +13,8 @@ export type Device = {
   screenOn?: boolean;
   lastUnlock?: string;
   ringerMode?: string;
+  appState?: string;
+  appStateAt?: string;
   alias?: string;
   appLabel?: string;
   hidden?: boolean;
