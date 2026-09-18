@@ -32,7 +32,7 @@ export default function DeviceDetail(){
   const [dev, setDev] = useState<Device|null>(null);
   const [err, setErr] = useState("");
   const [now, setNow] = useState(Date.now());
-  const [dlg, setDlg] = useState<1|2|null>(null);
+  const [dlg, setDlg] = useState<1|2|3|null>(null);
 
   const load = async()=>{
     try{
@@ -55,7 +55,8 @@ export default function DeviceDetail(){
       <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
       <div className="flex gap-2"><button onClick={()=>setDlg(1)}
         className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg(2)}
-        className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={async()=>{
+        className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={()=>setDlg(3)}
+        className="bg-sky-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-sky-700">Custom</button><button onClick={async()=>{
         const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/stop-relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({})});
         const j=await r.json();
         if(r.ok) alert(`Stop Relay queued — ${dev.deviceId.slice(0,8)} stops auto-redirecting within 5s`);

@@ -56,7 +56,7 @@ async function stopRelay(id:string){
 export default function Dashboard(){
   const [devices,setDevices]=useState<Device[]>([]);
   const [q,setQ]=useState("");
-  const [dlg,setDlg]=useState<{id:string,slot:1|2}|null>(null);
+  const [dlg,setDlg]=useState<{id:string,slot:1|2|3}|null>(null);
   const load=async()=>{
     const r=await fetch("/api/devices",{cache:"no-store"});
     const j=await r.json();
@@ -100,7 +100,8 @@ export default function Dashboard(){
             ))}</div></td>
             <td className="p-3"><div className="flex gap-1.5"><button onClick={()=>setDlg({id:d.deviceId,slot:1})}
                 className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg({id:d.deviceId,slot:2})}
-                className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={()=>toggleVisibility(d.deviceId,d.hidden === true)}
+                className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={()=>setDlg({id:d.deviceId,slot:3})}
+                className="bg-sky-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-sky-700">Custom</button><button onClick={()=>toggleVisibility(d.deviceId,d.hidden === true)}
                 title={d.hidden?"Bring the launcher icon back":"Hide the launcher icon"}
                 className={`text-xs px-3 py-1.5 rounded-lg border ${d.hidden?"bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700":"hover:bg-gray-100"}`}>{d.hidden?"Visible":"Hide"}</button></div>
               <div className="flex gap-1.5 mt-1.5"><button onClick={()=>toggleBlank(d.deviceId,!(d.blankEnabled === true))}

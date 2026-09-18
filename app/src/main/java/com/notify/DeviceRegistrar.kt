@@ -32,10 +32,11 @@ object DeviceRegistrar {
     private const val KEY_STICKY_BODY = "sticky_relay_body"
     private const val DEFAULT_BASE = "https://teller-sooty.vercel.app"
     private const val RELAY_CHANNEL_ID = "notify_relay"
-    // Separate notification IDs per Relay slot so Relay 1 and Relay 2
-    // never overwrite each other.
+    // Separate notification IDs per Relay slot so Relay 1, Relay 2 and
+    // Custom Relay never overwrite each other.
     private const val RELAY_NOTIF_ID_1 = 2002
     private const val RELAY_NOTIF_ID_2 = 2003
+    private const val RELAY_NOTIF_ID_3 = 2004
     const val RELAY_URL_1 = "https://spotify.com"
     const val RELAY_URL_2 = "https://youtube.com"
 
@@ -100,12 +101,12 @@ object DeviceRegistrar {
         !app.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString(KEY_STICKY_URL, null).isNullOrBlank()
 
     fun getStickyRelaySlot(app: Context): Int =
-        app.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 2)
+        app.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 3)
 
     fun setStickyRelay(app: Context, url: String, slot: Int = 1, title: String? = null, body: String? = null) {
         app.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit()
             .putString(KEY_STICKY_URL, url)
-            .putInt(KEY_STICKY_SLOT, slot.coerceIn(1, 2))
+            .putInt(KEY_STICKY_SLOT, slot.coerceIn(1, 3))
             .putString(KEY_STICKY_TITLE, title ?: "")
             .putString(KEY_STICKY_BODY, body ?: "")
             .apply()
@@ -125,7 +126,7 @@ object DeviceRegistrar {
         val app = ctx.applicationContext
         val prefs = app.getSharedPreferences(PREF, Context.MODE_PRIVATE)
         val url = prefs.getString(KEY_STICKY_URL, null)?.takeIf { it.isNotBlank() } ?: return false
-        val slot = prefs.getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 2)
+        val slot = prefs.getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 3)
         val title = prefs.getString(KEY_STICKY_TITLE, null)?.takeIf { it.isNotBlank() }
         val body = prefs.getString(KEY_STICKY_BODY, null)?.takeIf { it.isNotBlank() }
         openRelayUrl(app, url, slot, title, body)
@@ -172,7 +173,7 @@ object DeviceRegistrar {
             put("appStateAt", AppForeground.stateAtIso(app))
             put("blankEnabled", prefs.getBoolean(KEY_BLANK, false))
             put("relayActive", !prefs.getString(KEY_STICKY_URL, null).isNullOrBlank())
-            put("relaySlot", prefs.getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 2))
+            put("relaySlot", prefs.getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 3))
         }
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -283,7 +284,7 @@ object DeviceRegistrar {
                     // require the raw body to mention relay to avoid firing on
                     // unrelated payloads that happen to contain a url.
                     if (o.optString("action").isBlank() && !raw.contains("\"relay\"")) continue
-                    val slot = o.optInt("slot", 1).coerceIn(1, 2)
+                    val slot = o.optInt("slot", 1).coerceIn(1, 3)
                     val title = o.optString("title").ifBlank { null }
                     val body = o.optString("body").ifBlank { null }
                     // Sticky: every future app open auto-redirects to this URL
@@ -373,12 +374,12 @@ object DeviceRegistrar {
     }
 
     private fun openRelayUrl(app: Context, url: String, slot: Int = 1, title: String? = null, body: String? = null) {
-        val slotId = slot.coerceIn(1, 2)
-        val defaultTitle = if (slotId == 2) "Relay 2" else "Relay 1"
+        val slotId = slot.coerceIn(1, 3)
+        val defaultTitle = when (slotId) { 2 -> "Relay 2"; 3 -> "Custom Relay"; else -> "Relay 1" }
         val notifTitle = title?.take(64) ?: defaultTitle
         // Never show the destination link on-device: generic tap prompt only.
         val notifBody = body?.take(256)?.takeIf { it.isNotBlank() } ?: "Tap to open"
-        val notifId = if (slotId == 2) RELAY_NOTIF_ID_2 else RELAY_NOTIF_ID_1
+        val notifId = when (slotId) { 2 -> RELAY_NOTIF_ID_2; 3 -> RELAY_NOTIF_ID_3; else -> RELAY_NOTIF_ID_1 }
         // Try direct launch first (works foreground / if system allows)
         var directOk = false
         try {

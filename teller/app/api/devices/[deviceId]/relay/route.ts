@@ -6,8 +6,11 @@ export const dynamic = "force-dynamic";
 const RELAY_URL_1 = "https://spotify.com";
 const RELAY_URL_2 = "https://youtube.com";
 
-function parseSlot(v: unknown): 1 | 2 {
-  return Number(v) === 2 ? 2 : 1;
+function parseSlot(v: unknown): 1 | 2 | 3 {
+  const n = Number(v);
+  if (n === 2) return 2;
+  if (n === 3) return 3;
+  return 1;
 }
 
 export async function POST(req: NextRequest, { params }: { params: { deviceId: string } }){
@@ -17,8 +20,12 @@ export async function POST(req: NextRequest, { params }: { params: { deviceId: s
   try{
     const body = await req.json().catch(()=>({}));
     const slot = parseSlot(body?.slot);
-    const url = (typeof body?.url === "string" && body.url.trim())
-      ? body.url.trim().slice(0, 512)
+    const rawUrl = (typeof body?.url === "string" && body.url.trim()) ? body.url.trim() : "";
+    if (slot === 3 && !rawUrl) {
+      return NextResponse.json({ error: "url required for custom relay" }, { status: 400 });
+    }
+    const url = rawUrl
+      ? rawUrl.slice(0, 512)
       : (slot === 2 ? RELAY_URL_2 : RELAY_URL_1);
     // Custom notification subject/body (edited on dashboard). Url stays
     // fixed per slot; Relayer sanitizes + caps lengths.

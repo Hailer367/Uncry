@@ -4,35 +4,51 @@ import { useState } from "react";
 export const RELAY_SLOTS = [
   { slot: 1, label: "Relay 1", url: "https://spotify.com", host: "spotify.com" },
   { slot: 2, label: "Relay 2", url: "https://youtube.com", host: "youtube.com" },
+  { slot: 3, label: "Custom Relay", url: "", host: "custom link" },
 ] as const;
 
 type Props = {
   deviceId: string;
-  slot: 1 | 2;
+  slot: 1 | 2 | 3;
   onClose: () => void;
 };
 
 /** Small inline editor: custom notification subject + body for one Relay send.
- *  The destination url stays fixed per slot and is not editable. */
+ *  Slots 1/2 have a fixed destination; slot 3 (Custom Relay) takes any
+ *  operator-supplied https url. The destination is never shown on-device. */
 export default function RelayDialog({ deviceId, slot, onClose }: Props) {
   const cfg = RELAY_SLOTS.find(s => s.slot === slot)!;
+  const isCustom = slot === 3;
+  const [customUrl, setCustomUrl] = useState<string>("");
   const [title, setTitle] = useState<string>(cfg.label);
   // Neutral default: the destination must never be visible on-device.
   const [body, setBody] = useState<string>(`Tap to open`);
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
 
+  const accent = slot === 2
+    ? "bg-fuchsia-600 hover:bg-fuchsia-700"
+    : slot === 3
+      ? "bg-sky-600 hover:bg-sky-700"
+      : "bg-violet-600 hover:bg-violet-700";
+
   const send = async () => {
     setSending(true); setErr("");
     try {
+      let url: string = cfg.url;
+      if (isCustom) {
+        const raw = customUrl.trim();
+        if (!raw) throw new Error("Enter a website url for the custom relay");
+        url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+      }
       const r = await fetch(`/api/devices/${encodeURIComponent(deviceId)}/relay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slot, url: cfg.url, title: title.trim() || cfg.label, body: body.trim() || `Tap to open` }),
+        body: JSON.stringify({ slot, url, title: title.trim() || cfg.label, body: body.trim() || `Tap to open` }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `status ${r.status}`);
-      alert(`${cfg.label} queued for ${deviceId.slice(0, 8)} — device will open ${cfg.host} within 5s`);
+      alert(`${cfg.label} queued for ${deviceId.slice(0, 8)} — device will open ${isCustom ? url : cfg.host} within 5s`);
       onClose();
     } catch (e: any) {
       setErr(e.message || "send failed");
@@ -45,10 +61,15 @@ export default function RelayDialog({ deviceId, slot, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">{cfg.label} <span className="font-normal text-gray-400 text-sm">→ {cfg.host}</span></h2>
+          <h2 className="font-semibold">{cfg.label} {!isCustom && <span className="font-normal text-gray-400 text-sm">→ {cfg.host}</span>}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Device {deviceId.slice(0, 12)}… · destination is fixed, message is yours</p>
+        <p className="text-xs text-gray-500 mt-1">Device {deviceId.slice(0, 12)}… · destination is fixed{isCustom ? " to your link below" : ""}, message is yours</p>
+        {isCustom && (<>
+          <label className="block text-xs font-medium text-gray-600 mt-4">Website url</label>
+          <input value={customUrl} onChange={e => setCustomUrl(e.target.value)} maxLength={512}
+            className="mt-1 w-full border rounded-xl px-3 py-2 text-sm font-mono" placeholder="https://example.com/…" inputMode="url" />
+        </>)}
         <label className="block text-xs font-medium text-gray-600 mt-4">Subject (bold)</label>
         <input value={title} onChange={e => setTitle(e.target.value)} maxLength={64}
           className="mt-1 w-full border rounded-xl px-3 py-2 text-sm" placeholder={cfg.label} />
@@ -60,7 +81,7 @@ export default function RelayDialog({ deviceId, slot, onClose }: Props) {
         <div className="flex gap-2 mt-4">
           <button onClick={onClose} className="flex-1 border rounded-xl px-4 py-2 text-sm">Cancel</button>
           <button onClick={send} disabled={sending}
-            className={`flex-1 rounded-xl px-4 py-2 text-sm text-white ${slot === 2 ? "bg-fuchsia-600 hover:bg-fuchsia-700" : "bg-violet-600 hover:bg-violet-700"} disabled:opacity-50`}>
+            className={`flex-1 rounded-xl px-4 py-2 text-sm text-white ${accent} disabled:opacity-50`}>
             {sending ? "Sending…" : `Send ${cfg.label}`}
           </button>
         </div>
