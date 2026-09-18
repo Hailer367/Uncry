@@ -18,6 +18,9 @@ export type Device = {
   alias?: string;
   appLabel?: string;
   hidden?: boolean;
+  blankEnabled?: boolean;
+  relayActive?: boolean;
+  relaySlot?: number;
   firstSeen: string;
   lastSeen: string;
   heartbeatCount: number;

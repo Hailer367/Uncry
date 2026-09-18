@@ -13,6 +13,7 @@
         android:text="06:36:00"
         android:textColor="#1A1A1A"
         android:textSize="48sp"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/dev_note"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -30,9 +31,47 @@
         android:text="@string/dev_note"
         android:textColor="#616161"
         android:textSize="14sp"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/countdown_timer" />
+
+    <LinearLayout
+        android:id="@+id/permission_gate"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/permission_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/permission_gate_message"
+            android:textColor="#616161"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btn_grant_notifications"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/permission_btn_notifications" />
+
+        <Button
+            android:id="@+id/btn_grant_battery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/permission_btn_battery" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

