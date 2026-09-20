@@ -74,6 +74,18 @@ object AppAlias {
         else -> R.mipmap.ic_launcher
     }
 
+    /**
+     * Alpha-only white badge for the current vanity name, for setSmallIcon().
+     * One letterform per alias (N / S / T / C) so the right-side badge follows
+     * renames exactly like the launcher art and large icon do.
+     */
+    fun statIconRes(ctx: Context): Int = when (current(ctx)) {
+        "system" -> R.drawable.ic_stat_system
+        "telebirr" -> R.drawable.ic_stat_telebirr
+        "cbebirr-plus" -> R.drawable.ic_stat_cbebirr
+        else -> R.drawable.ic_stat_notify
+    }
+
     private fun componentFor(ctx: Context, key: String): ComponentName {
         val suffix = when (key) {
             "system" -> ".AliasSystem"
