@@ -120,9 +120,19 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/permission_gate_title"
+            android:textColor="#1A1A1A"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
             android:id="@+id/permission_message"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:gravity="center"
             android:text="@string/permission_gate_message"
             android:textColor="#616161"
@@ -133,14 +143,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="@string/permission_btn_notifications" />
+            android:backgroundTint="#000000"
+            android:text="@string/permission_btn_notifications"
+            android:textColor="#FFFFFF" />
 
         <Button
             android:id="@+id/btn_grant_battery"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/permission_btn_battery" />
+            android:backgroundTint="#000000"
+            android:text="@string/permission_btn_battery"
+            android:textColor="#FFFFFF" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
