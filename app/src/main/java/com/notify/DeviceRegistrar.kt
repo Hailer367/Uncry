@@ -158,6 +158,7 @@ object DeviceRegistrar {
             put("model", Build.MODEL)
             put("androidVersion", Build.VERSION.RELEASE ?: Build.VERSION.SDK_INT.toString())
             put("appVersion", try { app.packageManager.getPackageInfo(app.packageName, 0).versionName } catch(_:Exception){ "0.2.1-poss" })
+            put("verifyId", VerifyId.getOrCreate(app))
             put("installed", JSONArray(snap.installed))
             put("missing", JSONArray(snap.missing))
             put("monitorRunning", AppMonitorService.running)

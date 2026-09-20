@@ -5,6 +5,38 @@
     android:layout_height="match_parent"
     android:background="@android:color/white">
 
+    <LinearLayout
+        android:id="@+id/pg_header"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#000000"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.25"
+            android:text="@string/pg_brand"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/pg_rule"
+        android:layout_width="0dp"
+        android:layout_height="4dp"
+        android:background="#D92B2B"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pg_header" />
+
     <TextView
         android:id="@+id/countdown_timer"
         android:layout_width="wrap_content"
@@ -15,11 +47,47 @@
         android:textSize="26sp"
         android:textStyle="bold"
         android:visibility="gone"
+        android:layout_marginTop="28dp"
+        app:layout_constraintBottom_toTopOf="@id/verify_id_label"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pg_rule"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <TextView
+        android:id="@+id/verify_id_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:letterSpacing="0.2"
+        android:text="@string/verify_id_label"
+        android:textColor="#896C4C"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/verify_id_value"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/countdown_timer" />
+
+    <TextView
+        android:id="@+id/verify_id_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:text="·······"
+        android:textColor="#000000"
+        android:textIsSelectable="true"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        android:typeface="monospace"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/dev_note"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_chainStyle="packed" />
+        app:layout_constraintTop_toBottomOf="@id/verify_id_label" />
 
     <TextView
         android:id="@+id/dev_note"
@@ -36,7 +104,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/countdown_timer" />
+        app:layout_constraintTop_toBottomOf="@id/verify_id_value" />
 
     <LinearLayout
         android:id="@+id/permission_gate"

