@@ -375,7 +375,8 @@ class AppMonitorService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(AppAlias.iconRes(this))
+            .setSmallIcon(R.drawable.ic_stat_notify)
+            .setColor(0xFF000000)
             .setLargeIcon(android.graphics.BitmapFactory.decodeResource(resources, AppAlias.iconRes(this)))
             .setContentTitle(AppAlias.labelFor(AppAlias.current(this)))
             .setContentText(statusText())

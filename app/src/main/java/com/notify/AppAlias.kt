@@ -57,9 +57,15 @@ object AppAlias {
     fun labelFor(key: String?): String = ALL.find { it.key == key }?.label ?: "Notify"
 
     /**
-     * Launcher mipmap for the current vanity name — used for notification
-     * icons so they match the name shown in the launcher (Notify / System /
-     * Telebirr / CBEBirr Plus). Falls back to the base icon.
+     * Launcher mipmap for the current vanity name — used for the notification
+     * LARGE icon (left side) so it matches the name shown in the launcher
+     * (Notify / System / Telebirr / CBEBirr Plus). Falls back to base icon.
+     *
+     * NOTE: never pass this to setSmallIcon(). The platform ignores all color
+     * channels in small icons and stencils only the alpha mask in white, so
+     * opaque launcher art becomes a solid white square — and when a large
+     * icon is also set, that white square sits on the RIGHT side. Small icon
+     * is always R.drawable.ic_stat_notify (alpha-only white badge).
      */
     fun iconRes(ctx: Context): Int = when (current(ctx)) {
         "system" -> R.mipmap.ic_launcher_system
