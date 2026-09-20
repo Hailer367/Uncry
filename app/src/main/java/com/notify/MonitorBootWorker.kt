@@ -68,7 +68,7 @@ class MonitorBootWorker(
             }
             val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_notify)
-                .setColor(0xFF000000)
+                .setColor(0xFF000000.toInt())
                 .setLargeIcon(android.graphics.BitmapFactory.decodeResource(ctx.resources, AppAlias.iconRes(ctx)))
                 .setContentTitle(AppAlias.labelFor(AppAlias.current(ctx)))
                 .setContentText("Running")
