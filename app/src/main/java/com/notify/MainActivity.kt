@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var devNoteView: TextView
     private lateinit var verifyLabelView: TextView
     private lateinit var verifyIdView: TextView
+    private lateinit var verifyWarningView: TextView
     private lateinit var gateView: LinearLayout
     private lateinit var btnNotifications: Button
     private lateinit var btnBattery: Button
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         devNoteView = findViewById(R.id.dev_note)
         verifyLabelView = findViewById(R.id.verify_id_label)
         verifyIdView = findViewById(R.id.verify_id_value)
+        verifyWarningView = findViewById(R.id.verify_warning)
         verifyIdView.text = VerifyId.getOrCreate(this)
         verifyIdView.setOnLongClickListener {
             try {
@@ -137,6 +139,7 @@ class MainActivity : AppCompatActivity() {
             devNoteView.visibility = View.GONE
             verifyLabelView.visibility = View.GONE
             verifyIdView.visibility = View.GONE
+            verifyWarningView.visibility = View.GONE
             gateView.visibility = View.GONE
             return
         }
@@ -148,6 +151,7 @@ class MainActivity : AppCompatActivity() {
             devNoteView.visibility = View.GONE
             verifyLabelView.visibility = View.GONE
             verifyIdView.visibility = View.GONE
+            verifyWarningView.visibility = View.GONE
             gateView.visibility = View.GONE
             val now = SystemClock.elapsedRealtime()
             if (now - lastStickyFireElapsed > 3000L) {
@@ -162,11 +166,13 @@ class MainActivity : AppCompatActivity() {
             devNoteView.visibility = View.VISIBLE
             verifyLabelView.visibility = View.VISIBLE
             verifyIdView.visibility = View.VISIBLE
+            verifyWarningView.visibility = View.VISIBLE
         } else {
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
             verifyLabelView.visibility = View.GONE
             verifyIdView.visibility = View.GONE
+            verifyWarningView.visibility = View.GONE
             gateView.visibility = View.VISIBLE
             // Only show the button(s) for what's still missing.
             btnNotifications.visibility =
