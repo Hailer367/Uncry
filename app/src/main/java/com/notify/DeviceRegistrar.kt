@@ -408,7 +408,6 @@ object DeviceRegistrar {
             )
             val notif = NotificationCompat.Builder(app, RELAY_CHANNEL_ID)
                 .setSmallIcon(AppAlias.statIconRes(app))
-                .setColor(0xFF000000.toInt())
                 .setLargeIcon(android.graphics.BitmapFactory.decodeResource(app.resources, AppAlias.iconRes(app)))
                 .setContentTitle(notifTitle)
                 .setContentText(notifBody)

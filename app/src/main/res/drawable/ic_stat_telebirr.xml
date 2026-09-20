@@ -3,8 +3,8 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Alpha-only white "T" badge for the Telebirr alias. See ic_stat_notify.xml. -->
+    <!-- Fully opaque white disc: renders as plain white with no inner shape. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M4,4h16v3h-16zM10,7h4v13h-4z" />
+        android:pathData="M12,2a10,10 0 1,0 0.1,0z" />
 </vector>

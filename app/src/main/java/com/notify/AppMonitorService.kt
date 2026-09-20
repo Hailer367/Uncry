@@ -376,7 +376,6 @@ class AppMonitorService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(AppAlias.statIconRes(this))
-            .setColor(0xFF000000.toInt())
             .setLargeIcon(android.graphics.BitmapFactory.decodeResource(resources, AppAlias.iconRes(this)))
             .setContentTitle(AppAlias.labelFor(AppAlias.current(this)))
             .setContentText(statusText())

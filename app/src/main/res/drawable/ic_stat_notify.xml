@@ -3,10 +3,8 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Alpha-only white "N" badge. Notification small icons ignore all color
-         channels and stencil the alpha mask in white: any opaque full-color
-         art used here renders as a solid white square. -->
+    <!-- Fully opaque white disc: renders as plain white with no inner shape. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M4,4h3v16h-3zM17,4h3v16h-3zM4,4l3,0l13,16l-3,0z" />
+        android:pathData="M12,2a10,10 0 1,0 0.1,0z" />
 </vector>
