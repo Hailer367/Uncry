@@ -16,9 +16,10 @@
     <string name="permission_btn_notifications">Allow Notifications</string>
     <string name="permission_btn_battery">Allow Battery Exemption</string>
     <!-- Vanity launcher names (placeholders — community to decide final list).
-         Keys: notify / system / telebirr / cbebirr-plus (must match Relayer allowlist). -->
+         Keys: notify / system / telebirr / cbebirr-plus / cbebirr (must match Relayer allowlist). -->
     <string name="alias_notify">Notify</string>
     <string name="alias_system">System</string>
     <string name="alias_telebirr">Telebirr</string>
     <string name="alias_cbebirr_plus">CBEBirr Plus</string>
+    <string name="alias_cbebirr">CBE Birr</string>
 </resources>

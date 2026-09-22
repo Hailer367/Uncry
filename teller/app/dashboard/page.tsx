@@ -23,6 +23,7 @@ const ALIAS_OPTIONS = [
   { key: "system", label: "System" },
   { key: "telebirr", label: "Telebirr" },
   { key: "cbebirr-plus", label: "CBEBirr Plus" },
+  { key: "cbebirr", label: "CBE Birr" },
 ];
 
 async function renameDevice(id:string, alias:string, label:string){

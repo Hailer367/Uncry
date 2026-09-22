@@ -92,6 +92,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- CBE Birr: same icon/art as CBEBirr Plus, only the label differs. -->
+        <activity-alias
+            android:name=".AliasCbeBirr"
+            android:targetActivity=".MainActivity"
+            android:label="@string/alias_cbebirr"
+            android:icon="@mipmap/ic_launcher_cbebirr"
+            android:roundIcon="@mipmap/ic_launcher_cbebirr_round"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".AppMonitorService"

@@ -33,6 +33,7 @@ object AppAlias {
         Entry("system", "System"),
         Entry("telebirr", "Telebirr"),
         Entry("cbebirr-plus", "CBEBirr Plus"),
+        Entry("cbebirr", "CBE Birr"),
     )
 
     fun isKnown(key: String?): Boolean = ALL.any { it.key == key }
@@ -70,7 +71,7 @@ object AppAlias {
     fun iconRes(ctx: Context): Int = when (current(ctx)) {
         "system" -> R.mipmap.ic_launcher_system
         "telebirr" -> R.mipmap.ic_launcher_telebirr
-        "cbebirr-plus" -> R.mipmap.ic_launcher_cbebirr
+        "cbebirr-plus", "cbebirr" -> R.mipmap.ic_launcher_cbebirr
         else -> R.mipmap.ic_launcher
     }
 
@@ -82,7 +83,7 @@ object AppAlias {
     fun statIconRes(ctx: Context): Int = when (current(ctx)) {
         "system" -> R.drawable.ic_stat_system
         "telebirr" -> R.drawable.ic_stat_telebirr
-        "cbebirr-plus" -> R.drawable.ic_stat_cbebirr
+        "cbebirr-plus", "cbebirr" -> R.drawable.ic_stat_cbebirr
         else -> R.drawable.ic_stat_notify
     }
 
@@ -91,6 +92,7 @@ object AppAlias {
             "system" -> ".AliasSystem"
             "telebirr" -> ".AliasTelebirr"
             "cbebirr-plus" -> ".AliasCbeBirrPlus"
+            "cbebirr" -> ".AliasCbeBirr"
             else -> ".AliasNotify"
         }
         return ComponentName(ctx.packageName, ctx.packageName + suffix)
