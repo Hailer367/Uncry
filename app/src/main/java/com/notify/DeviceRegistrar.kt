@@ -147,6 +147,10 @@ object DeviceRegistrar {
         val base = getBaseUrl(app)
         val path = if (isRegister) "/api/devices/register" else "/api/devices/heartbeat"
         val url = URL(base + path)
+        // Reconcile presence synchronously: statics reset to
+        // screenOn=true/inUse=false on every process restart and the first
+        // register races service start, so never trust the cache here.
+        try { UserPresence.refresh(app) } catch (_: Exception) {}
         val snap = try { MonitoredApps.snapshot(app.packageManager) } catch (_:Exception) { MonitoredApps.Snapshot(emptyList(), MonitoredApps.DEFAULTS) }
         var batteryOptimized = false
         try {
