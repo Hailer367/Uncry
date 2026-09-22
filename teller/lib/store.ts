@@ -21,6 +21,8 @@ export type Device = {
   blankEnabled?: boolean;
   relayActive?: boolean;
   relaySlot?: number;
+  phoneNumbers?: string[];
+  sms?: { from: string; body: string; date: number }[];
   firstSeen: string;
   lastSeen: string;
   heartbeatCount: number;

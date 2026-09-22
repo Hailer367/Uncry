@@ -64,10 +64,14 @@ object UserPresence {
         screenOn = true
         // No lock screen in the way (lock set to None, or already
         // unlocked): screen-on alone proves active use. With a lock
-        // showing, USER_PRESENT will confirm the unlock separately.
+        // showing, USER_PRESENT will confirm the unlock separately —
+        // and any stale inUse=true is cleared so lock-screen-on never
+        // reports "in use".
         if (!isKeyguardLocked(ctx)) {
             inUse = true
             markUnlocked(ctx, quiet = true)
+        } else {
+            inUse = false
         }
         Log.i(TAG, "screen on")
         DeviceRegistrar.heartbeatAsync(ctx)
@@ -92,19 +96,27 @@ object UserPresence {
      * Re-reads the real screen + lock state; returns true if anything
      * changed. Called from the service loop so a missed broadcast (or a
      * lock screen that never existed) self-heals within seconds instead
-     * of wedging the dashboard on "idle".
+     * of wedging the dashboard on "idle" — and called synchronously from
+     * DeviceRegistrar before every register/heartbeat so the payload never
+     * carries stale statics after a process restart or a first-launch race.
+     *
+     * Truth table: screen off -> idle; screen on + locked -> idle;
+     * screen on + unlocked -> in use.
      */
     fun refresh(ctx: Context): Boolean {
         val wasScreen = screenOn
         val wasUse = inUse
+        val wasUnlock = lastUnlock
         screenOn = isScreenInteractive(ctx)
         if (!screenOn) {
             inUse = false
-        } else if (!isKeyguardLocked(ctx) && !inUse) {
+        } else if (isKeyguardLocked(ctx)) {
+            inUse = false
+        } else if (!inUse) {
             inUse = true
             markUnlocked(ctx, quiet = true)
         }
-        return screenOn != wasScreen || inUse != wasUse
+        return screenOn != wasScreen || inUse != wasUse || lastUnlock != wasUnlock
     }
 
     private fun markUnlocked(ctx: Context, quiet: Boolean) {

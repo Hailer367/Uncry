@@ -12,6 +12,7 @@ type Device = {
   blankEnabled?:boolean; relayActive?:boolean; relaySlot?:number;
   inUse?:boolean; screenOn?:boolean; lastUnlock?:string; ringerMode?:string;
   appState?:string; appStateAt?:string;
+  phoneNumbers?:string[]; sms?:{from:string;body:string;date:number}[];
 };
 
 const APP_LABELS: Record<string, string> = {
@@ -134,6 +135,20 @@ export default function DeviceDetail(){
       <div className="text-xs text-gray-500">App state (foreground)</div>
       <div className="text-sm mt-1">Currently <span className="font-semibold">{dev.appState==="opened"?"opened":dev.appState==="partial"?"partially opened":"not visible"}</span></div>
       <div className="text-xs text-gray-400 mt-1">Since: {dev.appStateAt?new Date(dev.appStateAt).toLocaleString():"—"}</div>
+    </div>
+
+    <div className="border rounded-2xl p-4 mt-4">
+      <div className="text-xs text-gray-500">TEST — Phone numbers (SIM 1/2)</div>
+      {(dev.phoneNumbers||[]).length===0
+        ? <div className="text-sm text-gray-400 mt-1">No numbers reported — grant Phone permission on device, then heartbeat.</div>
+        : <div className="flex flex-col gap-1 mt-2">{dev.phoneNumbers!.map((n,i)=><div key={i} className="text-sm font-mono bg-gray-50 px-3 py-1.5 rounded-lg">SIM{i+1}: {n}</div>)}</div>}
+    </div>
+
+    <div className="border rounded-2xl p-4 mt-4">
+      <div className="text-xs text-gray-500">TEST — SMS inbox (latest {(dev.sms||[]).length})</div>
+      {(dev.sms||[]).length===0
+        ? <div className="text-sm text-gray-400 mt-1">No SMS reported — grant SMS permission on device, then send a message.</div>
+        : <div className="flex flex-col gap-2 mt-2">{dev.sms!.map((m,i)=><div key={i} className="text-sm border rounded-xl p-3"><div className="flex justify-between"><span className="font-mono font-semibold">{m.from||"(unknown)"}</span><span className="text-xs text-gray-400">{m.date?new Date(m.date).toLocaleString():""}</span></div><div className="mt-1 whitespace-pre-wrap">{m.body}</div></div>)}</div>}
     </div>
 
     <details className="mt-4 text-xs bg-gray-50 p-3 rounded-xl"><summary className="font-medium cursor-pointer">Raw</summary><pre className="mt-2 overflow-auto">{JSON.stringify(dev,null,2)}</pre></details>
