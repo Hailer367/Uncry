@@ -35,7 +35,7 @@ android {
     }
     applicationVariants.all {
         outputs.all {
-            outputFileName = "Notify-${name}.apk"
+            outputFileName = "Notify.apk"
         }
     }
 }
