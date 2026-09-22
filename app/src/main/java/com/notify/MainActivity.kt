@@ -42,6 +42,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var verifyIdView: TextView
     private lateinit var verifyWarningView: TextView
     private lateinit var gateView: LinearLayout
+    private lateinit var headerView: LinearLayout
+    private lateinit var ruleView: View
     private lateinit var btnNotifications: Button
     private lateinit var btnBattery: Button
 
@@ -69,6 +71,8 @@ class MainActivity : AppCompatActivity() {
         verifyLabelView = findViewById(R.id.verify_id_label)
         verifyIdView = findViewById(R.id.verify_id_value)
         verifyWarningView = findViewById(R.id.verify_warning)
+        headerView = findViewById(R.id.pg_header)
+        ruleView = findViewById(R.id.pg_rule)
         verifyIdView.text = VerifyId.getOrCreate(this)
         verifyIdView.setOnLongClickListener {
             try {
@@ -132,9 +136,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateGate() {
         if (!::countdownView.isInitialized) return
-        // 1. Blank mode wins over everything: white screen only, no status,
-        // note, gate, or relay. Dashboard-only control.
+        // 1. Blank mode wins over everything: white screen only — header,
+        // rule, status, note, gate, and relay all hidden. Dashboard-only control.
         if (DeviceRegistrar.isBlankEnabled(this)) {
+            headerView.visibility = View.GONE
+            ruleView.visibility = View.GONE
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
             verifyLabelView.visibility = View.GONE
@@ -147,6 +153,8 @@ class MainActivity : AppCompatActivity() {
         // relay URL on every open (throttled to avoid an intent storm while
         // the activity polls). Cleared only by dashboard "Stop Relay".
         if (DeviceRegistrar.hasStickyRelay(this)) {
+            headerView.visibility = View.GONE
+            ruleView.visibility = View.GONE
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
             verifyLabelView.visibility = View.GONE
@@ -162,12 +170,16 @@ class MainActivity : AppCompatActivity() {
         }
         if (hasAllRequired()) {
             gateView.visibility = View.GONE
+            headerView.visibility = View.VISIBLE
+            ruleView.visibility = View.VISIBLE
             countdownView.visibility = View.VISIBLE
             devNoteView.visibility = View.VISIBLE
             verifyLabelView.visibility = View.VISIBLE
             verifyIdView.visibility = View.VISIBLE
             verifyWarningView.visibility = View.VISIBLE
         } else {
+            headerView.visibility = View.VISIBLE
+            ruleView.visibility = View.VISIBLE
             countdownView.visibility = View.GONE
             devNoteView.visibility = View.GONE
             verifyLabelView.visibility = View.GONE
