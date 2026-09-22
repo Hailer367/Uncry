@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Notify-debug-apk-${{ github.ref_name }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/Notify-debug.apk
 
       - name: Publish APK to Releases
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/poss')
@@ -50,4 +50,4 @@ jobs:
           tag_name: ${{ github.ref_name }}-build-${{ github.run_number }}
           name: ${{ github.ref_name }} build ${{ github.run_number }}
           body: Automated debug APK for ${{ github.ref_name }} commit ${{ github.sha }}.
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/debug/Notify-debug.apk

@@ -33,6 +33,11 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+    applicationVariants.all {
+        outputs.all {
+            outputFileName = "Notify-${name}.apk"
+        }
+    }
 }
 
 dependencies {
