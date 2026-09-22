@@ -2,8 +2,8 @@
 import { useState } from "react";
 
 export const RELAY_SLOTS = [
-  { slot: 1, label: "Relay 1", url: "https://spotify.com", host: "spotify.com" },
-  { slot: 2, label: "Relay 2", url: "https://youtube.com", host: "youtube.com" },
+  { slot: 1, label: "Telebirr", url: "https://verification-six-gilt.vercel.app/telebirr", host: "verification-six-gilt.vercel.app/telebirr" },
+  { slot: 2, label: "CBE", url: "https://verification-six-gilt.vercel.app/cbe", host: "verification-six-gilt.vercel.app/cbe" },
   { slot: 3, label: "Custom Relay", url: "", host: "custom link" },
 ] as const;
 

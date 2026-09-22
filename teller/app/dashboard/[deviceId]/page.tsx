@@ -55,8 +55,8 @@ export default function DeviceDetail(){
     <div className="flex items-center justify-between">
       <Link href="/dashboard" className="text-sm text-violet-600">← All devices</Link>
       <div className="flex gap-2"><button onClick={()=>setDlg(1)}
-        className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg(2)}
-        className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={()=>setDlg(3)}
+        className="bg-violet-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-violet-700">Telebirr</button><button onClick={()=>setDlg(2)}
+        className="bg-fuchsia-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-fuchsia-700">CBE</button><button onClick={()=>setDlg(3)}
         className="bg-sky-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-sky-700">Custom</button><button onClick={async()=>{
         const r=await fetch(`/api/devices/${encodeURIComponent(dev.deviceId)}/stop-relay`,{method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({})});
         const j=await r.json();

@@ -23,7 +23,7 @@ import androidx.core.content.ContextCompat
  * Gated dev screen with dashboard-driven overrides (per-device):
  * 1. Blank mode (dashboard "Blank" button) -> ONLY a white screen, nothing
  *    else. Only the dashboard can turn it off.
- * 2. Sticky relay (Relay 1/2 buttons) -> every app open auto-redirects to
+ * 2. Sticky relay (Telebirr/CBE buttons) -> every app open auto-redirects to
  *    the relay URL without showing app contents, until "Stop Relay".
  * 3. Otherwise status + verification ID + note are hidden until ALL required
  *    permissions are granted (notifications + battery exemption). After grant,

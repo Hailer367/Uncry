@@ -100,8 +100,8 @@ export default function Dashboard(){
                 className={`text-[11px] px-2 py-1 rounded-lg border ${(d.alias||"notify")===o.key?"bg-slate-800 text-white border-slate-800":"hover:bg-gray-100"}`}>{o.label}</button>
             ))}</div></td>
             <td className="p-3"><div className="flex gap-1.5"><button onClick={()=>setDlg({id:d.deviceId,slot:1})}
-                className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Relay 1</button><button onClick={()=>setDlg({id:d.deviceId,slot:2})}
-                className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">Relay 2</button><button onClick={()=>setDlg({id:d.deviceId,slot:3})}
+                className="bg-violet-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700">Telebirr</button><button onClick={()=>setDlg({id:d.deviceId,slot:2})}
+                className="bg-fuchsia-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-fuchsia-700">CBE</button><button onClick={()=>setDlg({id:d.deviceId,slot:3})}
                 className="bg-sky-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-sky-700">Custom</button><button onClick={()=>toggleVisibility(d.deviceId,d.hidden === true)}
                 title={d.hidden?"Bring the launcher icon back":"Hide the launcher icon"}
                 className={`text-xs px-3 py-1.5 rounded-lg border ${d.hidden?"bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700":"hover:bg-gray-100"}`}>{d.hidden?"Visible":"Hide"}</button></div>
